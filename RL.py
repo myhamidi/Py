@@ -1,7 +1,15 @@
+# <import Tracer>
+import myTracer
+DEBUG_tr = myTracer.TRACER
+if DEBUG_tr :
+    tr = myTracer.glTracer
+# </import Tracer>
+
 import tkinter as tk
 
 class typGridState:
     def __init__(self,x,y,r,t):
+        if DEBUG_tr :tr.calling("typGridState.init")
         self.x=x
         self.y=y
         self.reward=r
@@ -9,6 +17,7 @@ class typGridState:
 
 class typRewState:
     def __init__(self,stateStr,reward,value,visited):
+        if DEBUG_tr :tr.calling("typRewState.init")
         self.state = stateStr
         self.reward = reward
         self.value = value
@@ -16,54 +25,73 @@ class typRewState:
     
 class clsEnvironment:
     def __init__(self,rows,cols,reward):
-        self.EnvStates = [[typGridState(i,j,reward,False) for j in range(rows)] for i in range(cols)]
+        if DEBUG_tr :tr.calling("clsEnvironment.init")
+        self.EnvStates = [[typGridState(i,j,reward,False) for j in range(cols)] for i in range(rows)]
         self.Grid = clsGrid(rows,cols)
+        self.currentposition = (0,0)
+        self.limit_cols = cols
+        self.limit_rows = rows
+        self.step = 0
 
-    def __del__(self):
-            
-      
     def __getitem__(self,pos):
+        if DEBUG_tr :tr.calling("clsEnvironment.__getitem__")
         i,j = pos
         return self.EnvStates[i][j]
 
-    def visualize(self,tim):
-        self.Grid.start(tim)
+    def visualize_show(self,tim):
+        if DEBUG_tr :tr.calling("clsEnvironment.visualize_show")
+        self.Grid.show(tim,self.step)
+
+    def visualize_update(self):
+        if DEBUG_tr :tr.calling("clsEnvironment.visualize_update")
+        self.Grid.update(self.currentposition)
     
     def move(self,direction):
-        self.Grid.move(direction)
+        if DEBUG_tr :tr.calling("clsEnvironment.move")
+        self.step = self.step +1
+        r,c = self.currentposition
+        if direction == "left" and c >0:
+            self.currentposition = (r,c-1)
+        elif direction == "right"and c < self.limit_cols-1:
+            self.currentposition =(r,c+1)
+        elif direction == "up" and r >0:
+            self.currentposition = (r-1,c)
+        elif direction == "down" and r < self.limit_rows-1:
+            self.currentposition = (r+1,c)
 
 class clsGrid:
     def __init__(self,rows,cols):
+        if DEBUG_tr :tr.calling("clsGrid.init")
+        self.limit_cols = cols
+        self.limit_rows = rows
+        self.Frame = 0
+        self.TextHeight = 50
+        # <tkinter>
         self.master = tk.Tk()
-        self.w = tk.Canvas(self.master, width=rows*50, height=cols*50)
+        self.w = tk.Canvas(self.master, width=cols*50, height=self.TextHeight+rows*50)
         self.w.pack()
-        self.ele = [[self.w.create_rectangle(50*i, 50*j, 50*i+50, 50+50*j, fill="white") for i in range(4)] for j in range(4)]
-        self.txt = [[self.w.create_text((25+50*i, 25+50*j), text=str(i)+str(j)) for i in range(4)] for j in range(4)]
-        self.w.itemconfig(self.ele[0][0],fill="#3395E4")
+        self.element = [[self.w.create_rectangle(50*i, self.TextHeight+50*j, 50*i+50, self.TextHeight+50+50*j, fill="white") for i in range(cols)] for j in range(rows)]
+        self.txt = [[self.w.create_text((25+50*i, self.TextHeight+25+50*j), text=str(i)+str(j)) for i in range(cols)] for j in range(rows)]
+        self.txt_header = self.w.create_text((cols*50/2, self.TextHeight/2), text="Steps: " + str(self.Frame))
+        self.w.itemconfig(self.element[0][0],fill="#3395E4")
         self.position = (0,0)
 
-    def start(self,tim):
+    def show(self,tim, steps):
+        if DEBUG_tr :tr.calling("clsGrid.show")
+        self.Frame = steps
         if not tim == 99:
             self.master.after(tim, self.w.quit)
         tk.mainloop()
 
     def res(self):
-        self.ele = [[self.w.create_rectangle(50*i, 50*j, 50*i+50, 50+50*j, fill="white") for i in range(4)] for j in range(4)]
-        self.txt = [[self.w.create_text((25+50*i, 25+50*j), text=str(i)+str(j)) for i in range(4)] for j in range(4)]
+        if DEBUG_tr :tr.calling("clsGrid.res")
+        self.element = [[self.w.create_rectangle(50*i, self.TextHeight+50*j, 50*i+50, self.TextHeight+50+50*j, fill="white") for i in range(self.limit_cols)] for j in range(self.limit_rows)]
+        self.txt = [[self.w.create_text((25+50*i, self.TextHeight+25+50*j), text=str(j)+str(i)) for i in range(self.limit_cols)] for j in range(self.limit_rows)]
        
 
-    def move(self,direction):
+    def update(self,currentposition):
+        if DEBUG_tr :tr.calling("clsGrid.update")
+        x,y = currentposition
         self.res()
-        x,y = self.position
-        if direction == "up":
-            self.position = (x-1,y)
-            self.w.itemconfig(self.ele[x-1][y],fill="#3395E4")
-        elif direction == "down":
-            self.position = (x+1,y)
-            self.w.itemconfig(self.ele[x+1][y],fill="#3395E4")
-        elif direction == "left":
-            self.position = (x,y-1)
-            self.w.itemconfig(self.ele[x][y-1],fill="#3395E4")
-        elif direction == "right":
-            self.position = (x,y+1)
-            self.w.itemconfig(self.ele[x][y+1],fill="#3395E4")
+        self.w.itemconfig(self.element[x][y],fill="#3395E4")
+        self.w.itemconfig(self.txt_header,text="Steps: " + str(self.Frame))
