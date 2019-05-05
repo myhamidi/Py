@@ -9,6 +9,12 @@ class clsTracer():
             self.arr.append(callName)
 
     def getCalls(self):
+        self.arr.sort()
         return self.arr
+    
+    def call(self,callName):
+        if TRACER:
+            if not callName in self.arr:
+                self.arr.append(callName)
 
 glTracer = clsTracer()

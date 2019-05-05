@@ -1,31 +1,18 @@
-# <import Tracer>
-import myTracer
-DEBUG_tr = myTracer.TRACER
-if DEBUG_tr :
-    tr = myTracer.glTracer
-# </import Tracer>
+import myTracer;tr = myTracer.glTracer
 
 import tkinter as tk
 
 class typGridState:
     def __init__(self,x,y,r,t):
-        if DEBUG_tr :tr.calling("typGridState.init")
+        tr.call("typGridState.init")
         self.x=x
         self.y=y
         self.reward=r
         self.terminal=t
-
-class typRewState:
-    def __init__(self,stateStr,reward,value,visited):
-        if DEBUG_tr :tr.calling("typRewState.init")
-        self.state = stateStr
-        self.reward = reward
-        self.value = value
-        self.visited = visited
     
 class clsEnvironment:
     def __init__(self,rows,cols,reward):
-        if DEBUG_tr :tr.calling("clsEnvironment.init")
+        tr.call("clsEnvironment.init")
         self.EnvStates = [[typGridState(i,j,reward,False) for j in range(cols)] for i in range(rows)]
         self.Grid = clsGrid(rows,cols)
         self.currentposition = (0,0)
@@ -34,20 +21,20 @@ class clsEnvironment:
         self.step = 0
 
     def __getitem__(self,pos):
-        if DEBUG_tr :tr.calling("clsEnvironment.__getitem__")
+        tr.call("clsEnvironment.__getitem__")
         i,j = pos
         return self.EnvStates[i][j]
 
     def visualize_show(self,tim):
-        if DEBUG_tr :tr.calling("clsEnvironment.visualize_show")
+        tr.call("clsEnvironment.visualize_show")
         self.Grid.show(tim,self.step)
 
     def visualize_update(self):
-        if DEBUG_tr :tr.calling("clsEnvironment.visualize_update")
+        tr.call("clsEnvironment.visualize_update")
         self.Grid.update(self.currentposition)
     
     def move(self,direction):
-        if DEBUG_tr :tr.calling("clsEnvironment.move")
+        tr.call("clsEnvironment.move")
         self.step = self.step +1
         r,c = self.currentposition
         if direction == "left" and c >0:
@@ -61,7 +48,7 @@ class clsEnvironment:
 
 class clsGrid:
     def __init__(self,rows,cols):
-        if DEBUG_tr :tr.calling("clsGrid.init")
+        tr.call("clsGrid.init")
         self.limit_cols = cols
         self.limit_rows = rows
         self.Frame = 0
@@ -77,20 +64,20 @@ class clsGrid:
         self.position = (0,0)
 
     def show(self,tim, steps):
-        if DEBUG_tr :tr.calling("clsGrid.show")
+        tr.call("clsGrid.show")
         self.Frame = steps
         if not tim == 99:
             self.master.after(tim, self.w.quit)
         tk.mainloop()
 
     def res(self):
-        if DEBUG_tr :tr.calling("clsGrid.res")
+        tr.call("clsGrid.res")
         self.element = [[self.w.create_rectangle(50*i, self.TextHeight+50*j, 50*i+50, self.TextHeight+50+50*j, fill="white") for i in range(self.limit_cols)] for j in range(self.limit_rows)]
         self.txt = [[self.w.create_text((25+50*i, self.TextHeight+25+50*j), text=str(j)+str(i)) for i in range(self.limit_cols)] for j in range(self.limit_rows)]
        
 
     def update(self,currentposition):
-        if DEBUG_tr :tr.calling("clsGrid.update")
+        tr.call("clsGrid.update")
         x,y = currentposition
         self.res()
         self.w.itemconfig(self.element[x][y],fill="#3395E4")
