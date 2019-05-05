@@ -25,6 +25,12 @@ class clsEnvironment:
         i,j = pos
         return self.EnvStates[i][j]
 
+    def setTerminalStates(self,lpos):
+        for tup in lpos:
+            row, col = tup
+            self.EnvStates[row][col].terminal = True
+
+
     def visualize_show(self,tim):
         tr.call("clsEnvironment.visualize_show")
         self.Grid.show(tim,self.step)

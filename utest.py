@@ -26,6 +26,14 @@ class testAgent(unittest.TestCase):
         self.assertEqual(testAgent.RewStates[0].state,"ALF")
         self.assertEqual(testAgent.RewStates[0].reward,-1)
 
+class testEnv(unittest.TestCase):
+    def test_SetTerminalState(self):
+        testEnv = RL.clsEnvironment(2,5,-1)
+        testEnv.setTerminalStates([(0,0),(0,1)])
+        self.assertEqual(testEnv.EnvStates[0][0].terminal,True)
+        self.assertEqual(testEnv.EnvStates[0][1].terminal,True)
+        self.assertEqual(testEnv.EnvStates[1][4].terminal,False)
+
 class testInits(unittest.TestCase):
     def test_typGridState(self):
         testState = RL.typGridState(1,2,3,True)
