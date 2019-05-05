@@ -1,5 +1,7 @@
 import myTracer;tr = myTracer.glTracer
 
+import random
+
 class typRewState:
     def __init__(self,stateStr,reward,value,visited):
         tr.call("typRewState.init")
@@ -10,30 +12,35 @@ class typRewState:
 
 class clsAgent:
 #Public:
-    def __init__(self):
+    def __init__(self,actionlist):
         tr.call("clsAgent.init")
         self.RewStates = [] #Typ: typRewState. Remembers all (unique) states visited.
         self.SequenceRewards = []  #Typ: (s,r). Remembers the sequence of states and commulative reward at step i
         self.TransitionMatrix = [] #Typ: List of Lists [[],[],...]
+        self.actions = actionlist
 
-    def PerceiveState(self,RewardState):
+    def PerceiveState(self,state,reward):
         tr.call("clsAgent.PerceiveState")
-        idx = self.pvRetIndex(RewardState)
-        self.SequenceRewards.append((idx,0))
+        idx = self.pvRetIndex(state,reward)
+        self.SequenceRewards.append((idx,reward))
         self.pvExtendTransitionMatrix()
+
+    def RetNextAction(self):
+        return random.choice(self.actions)
 
 #Private:
     def pvAppendNewState(self,RewardState):
         self.RewStates.append(RewardState)
         self.TransitionMatrix.append([])
 
-    def pvRetIndex(self,RewardState):
+    def pvRetIndex(self,state,reward):
         tr.call("clsAgent.pvRetIndex")
         for i in range(len(self.RewStates)):
-            if RewardState.state == self.RewStates[i].state:
+            if state == self.RewStates[i].state:
                 return i
-        self.pvAppendNewState(RewardState)
-        return len(self.RewStates)-1 #return index
+        # NewRewSate = typRewState(state,0,0,0)
+        self.pvAppendNewState(typRewState(state,reward,0,0))
+        return len(self.RewStates) - 1 #return index
 
     def pvExtendTransitionMatrix(self): #Type StateTransition: (1,3). From 1 to 3
         tr.call("clsAgent.pvExtendTransitionMatrix")

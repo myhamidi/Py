@@ -25,11 +25,14 @@ class clsEnvironment:
         i,j = pos
         return self.EnvStates[i][j]
 
+    def RetReward(self):
+        x,y = self.currentposition
+        return self.EnvStates[x][y].reward
+
     def setTerminalStates(self,lpos):
         for tup in lpos:
             row, col = tup
             self.EnvStates[row][col].terminal = True
-
 
     def visualize_show(self,tim):
         tr.call("clsEnvironment.visualize_show")

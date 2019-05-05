@@ -13,18 +13,22 @@ class testAgent(unittest.TestCase):
         self.assertEqual(testState.visited, -1)
     
     def test_Init(self):
-        testAgent = Agt.clsAgent()
+        testAgent = Agt.clsAgent([])
         self.assertEqual(len(testAgent.RewStates),0)
         self.assertEqual(len(testAgent.SequenceRewards),0)
         self.assertEqual(len(testAgent.TransitionMatrix),0)
     
     def test_PerceiveStates(self):
         testState = Agt.typRewState("ALF",-1,0,0)
-        testAgent = Agt.clsAgent()
-
+        testAgent = Agt.clsAgent([])
         testAgent.PerceiveState(testState)
         self.assertEqual(testAgent.RewStates[0].state,"ALF")
         self.assertEqual(testAgent.RewStates[0].reward,-1)
+
+    def test_InitActions(self):
+        testAgent = Agt.clsAgent(["up","down","left","right"])
+        self.assertListEqual(sorted(testAgent.actions),["down","left","right","up",])
+        self.assertIn(testAgent.RetNextAction(),["down","left","right","up",])
 
 class testEnv(unittest.TestCase):
     def test_SetTerminalState(self):
