@@ -19,12 +19,19 @@ class clsEnvironment:
         self.limit_cols = cols
         self.limit_rows = rows
         self.step = 0
+        self.run = 0
 
     def __getitem__(self,pos):
         tr.call("clsEnvironment.__getitem__")
         i,j = pos
         return self.EnvStates[i][j]
 
+    # def RetCurrentEnvState(self):
+    #     row, col = self.currentposition
+    #     if self.EnvStates[row][col].terminal:
+    #         return str(self.currentposition) + "terminal"
+    #     return str(self.currentposition)
+        
     def RetReward(self):
         x,y = self.currentposition
         return self.EnvStates[x][y].reward
@@ -36,7 +43,7 @@ class clsEnvironment:
 
     def visualize_show(self,tim):
         tr.call("clsEnvironment.visualize_show")
-        self.Grid.show(tim,self.step)
+        self.Grid.show(tim,self.step,self.run)
 
     def visualize_update(self):
         tr.call("clsEnvironment.visualize_update")
@@ -54,27 +61,35 @@ class clsEnvironment:
             self.currentposition = (r-1,c)
         elif direction == "down" and r < self.limit_rows-1:
             self.currentposition = (r+1,c)
+    
+    def InitRun(self,StartPosition):
+        tr.call("clsEnvironment.InitRun")
+        self.step = 0
+        self.run = self.run+1
+        self.currentposition = StartPosition
 
 class clsGrid:
     def __init__(self,rows,cols):
         tr.call("clsGrid.init")
         self.limit_cols = cols
         self.limit_rows = rows
-        self.Frame = 0
+        self.EnvSteps = 0
+        self.EnvRuns = 0
         self.TextHeight = 50
         # <tkinter>
         self.master = tk.Tk()
         self.w = tk.Canvas(self.master, width=cols*50, height=self.TextHeight+rows*50)
         self.w.pack()
         self.element = [[self.w.create_rectangle(50*i, self.TextHeight+50*j, 50*i+50, self.TextHeight+50+50*j, fill="white") for i in range(cols)] for j in range(rows)]
-        self.txt = [[self.w.create_text((25+50*i, self.TextHeight+25+50*j), text=str(i)+str(j)) for i in range(cols)] for j in range(rows)]
-        self.txt_header = self.w.create_text((cols*50/2, self.TextHeight/2), text="Steps: " + str(self.Frame))
+        self.txt_elements = [[self.w.create_text((25+50*i, self.TextHeight+25+50*j), text=str(i)+str(j)) for i in range(cols)] for j in range(rows)]
+        self.txt_header = self.w.create_text((cols*50/2, self.TextHeight/2), text="Run: " + str(self.EnvRuns) + ". Step: " + str(self.EnvSteps))
         self.w.itemconfig(self.element[0][0],fill="#3395E4")
         self.position = (0,0)
 
-    def show(self,tim, steps):
+    def show(self,tim,steps,run):
         tr.call("clsGrid.show")
-        self.Frame = steps
+        self.EnvSteps = steps
+        self.EnvRuns = run
         if not tim == 99:
             self.master.after(tim, self.w.quit)
         tk.mainloop()
@@ -82,7 +97,7 @@ class clsGrid:
     def res(self):
         tr.call("clsGrid.res")
         self.element = [[self.w.create_rectangle(50*i, self.TextHeight+50*j, 50*i+50, self.TextHeight+50+50*j, fill="white") for i in range(self.limit_cols)] for j in range(self.limit_rows)]
-        self.txt = [[self.w.create_text((25+50*i, self.TextHeight+25+50*j), text=str(j)+str(i)) for i in range(self.limit_cols)] for j in range(self.limit_rows)]
+        self.txt_elements = [[self.w.create_text((25+50*i, self.TextHeight+25+50*j), text=str(j)+str(i)) for i in range(self.limit_cols)] for j in range(self.limit_rows)]
        
 
     def update(self,currentposition):
@@ -90,4 +105,4 @@ class clsGrid:
         x,y = currentposition
         self.res()
         self.w.itemconfig(self.element[x][y],fill="#3395E4")
-        self.w.itemconfig(self.txt_header,text="Steps: " + str(self.Frame))
+        self.w.itemconfig(self.txt_header,text="Run: " + str(self.EnvRuns) + ". Step: " + str(self.EnvSteps))

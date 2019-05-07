@@ -13,18 +13,24 @@ rows = 5; cols = 10; reward = -1
 def test_clsEnvironment_vizualize():
     #Init Environment and Agent
     testEnv = RL.clsEnvironment(rows,cols,reward)
+    testEnv.setTerminalStates([(0,0),(rows-1,cols-1)])
     testAgent = Agt.clsAgent(["up","down","left","right"])
-    for i in range(2000):
-        #Agent performs Action
-        testEnv.move(testAgent.RetNextAction())
+    for k in range(5):
+        for i in range(1000):
 
-        #Agent perceives the Environment
-        testAgent.PerceiveState(str(testEnv.currentposition),testEnv.RetReward())
+            # if testAgent.StateIsTerminal():
+            #     testEnv.InitRun((4,9))
+            #     break
+            #Agent performs Action
+            testEnv.move(testAgent.RetNextAction())
 
-        #Update Visualization after 50 steps
-        if i %50 == 0:
-            testEnv.visualize_update()
-            testEnv.visualize_show(10)
+            #Agent perceives the Environment
+            testAgent.PerceiveState(str(testEnv.currentposition),testEnv.RetReward())
+
+            #Update Visualization after 50 steps
+            if i %50 == 0:
+                testEnv.visualize_update()
+                testEnv.visualize_show(10)
 
     return 0
 #</Test>

@@ -21,7 +21,7 @@ class testAgent(unittest.TestCase):
     def test_PerceiveStates(self):
         testState = Agt.typRewState("ALF",-1,0,0)
         testAgent = Agt.clsAgent([])
-        testAgent.PerceiveState(testState)
+        testAgent.PerceiveState(testState.state,testState.reward)
         self.assertEqual(testAgent.RewStates[0].state,"ALF")
         self.assertEqual(testAgent.RewStates[0].reward,-1)
 
@@ -30,6 +30,15 @@ class testAgent(unittest.TestCase):
         self.assertListEqual(sorted(testAgent.actions),["down","left","right","up",])
         self.assertIn(testAgent.RetNextAction(),["down","left","right","up",])
 
+    def test_TerminalState(self):
+        testAgent = Agt.clsAgent(["up","down","left","right"])
+        self.assertEqual(testAgent.StateIsTerminal(),False)
+        testAgent.PerceiveState("1",-1)
+        testAgent.PerceiveState("2",-1)
+        self.assertEqual(testAgent.StateIsTerminal(),False)
+        testAgent.PerceiveState("3terminal",-1)
+        self.assertEqual(testAgent.StateIsTerminal(),True)
+
 class testEnv(unittest.TestCase):
     def test_SetTerminalState(self):
         testEnv = RL.clsEnvironment(2,5,-1)
@@ -37,6 +46,16 @@ class testEnv(unittest.TestCase):
         self.assertEqual(testEnv.EnvStates[0][0].terminal,True)
         self.assertEqual(testEnv.EnvStates[0][1].terminal,True)
         self.assertEqual(testEnv.EnvStates[1][4].terminal,False)
+
+    def test_initRun(self):
+        testEnv = RL.clsEnvironment(3,5,-1)
+        testEnv.move("right")
+        self.assertEqual(testEnv.step,1)
+        testEnv.move("right")
+        self.assertEqual(testEnv.step,2)
+        testEnv.InitRun((2,3))
+        self.assertEqual(testEnv.step,0)
+        self.assertEqual(testEnv.run,1)
 
 class testInits(unittest.TestCase):
     def test_typGridState(self):
@@ -54,6 +73,7 @@ class testInits(unittest.TestCase):
         self.assertEqual(len(testEnv.EnvStates[0]),5)
         self.assertEqual(testEnv.currentposition,(0,0))
         self.assertEqual(testEnv.step,0)
+        self.assertEqual(testEnv.run,0)
     
     def test_clsGrid(self):
         testGrid = RL.clsGrid(5,10)
