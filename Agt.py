@@ -15,21 +15,23 @@ class clsAgent:
     def __init__(self,actionlist):
         tr.call("clsAgent.init")
         self.RewStates = []         #Typ: typRewState. Remembers all (unique) states visited.
-        self.SequenceRewards = []   #Typ: (s,r). Remembers the sequence of states and commulative reward at step i
+        self.SequenceRewards = []   #Typ: (s,r,a). Remembers state (idx), reward and action
         self.TransitionMatrix = []  #Typ: List of Lists [[],[],...]
         self.actions = actionlist
+        self.LastAction = ""
 
     def PerceiveState(self,strState,reward):
         tr.call("clsAgent.PerceiveState")
         idx = self.pvRetIndex(strState,reward)
         if len(self.SequenceRewards) == 0:r=0
-        else: _,r = self.SequenceRewards[-1]
-        self.SequenceRewards.append((idx,r+reward))
+        else: _,r,_ = self.SequenceRewards[-1]
+        self.SequenceRewards.append((idx,r+reward,self.LastAction))
         self.pvExtendTransitionMatrix()
 
     def RetNextAction(self):
         tr.call("clsAgent.RetNextAction")
-        return random.choice(self.actions)
+        self.LastAction = random.choice(self.actions)
+        return self.LastAction
 
     def IntiSequences(self):
         self.SequenceRewards =[]
@@ -38,7 +40,7 @@ class clsAgent:
         tr.call("clsAgent.StateIsTerminal")
         if len(self.SequenceRewards) == 0:
             return False
-        idx,_ = self.SequenceRewards[-1]
+        idx,_,_ = self.SequenceRewards[-1]
         if self.RewStates[idx].state[-8:] == "terminal":
             return True
         return False
@@ -60,10 +62,10 @@ class clsAgent:
     def pvExtendTransitionMatrix(self): #Type StateTransition: (1,3). From 1 to 3
         tr.call("clsAgent.pvExtendTransitionMatrix")
         if len (self.SequenceRewards)>1: #start from 2nd step
-            FromIdx,_ = self.SequenceRewards[-2]
-            ToIdx,_ = self.SequenceRewards[-1]
-            if not ToIdx in self.TransitionMatrix[FromIdx]:
-                self.TransitionMatrix[FromIdx].append(ToIdx)
+            FromIdx,_,_ = self.SequenceRewards[-2]
+            ToIdx,_,_ = self.SequenceRewards[-1]
+            if not (self.LastAction,ToIdx) in self.TransitionMatrix[FromIdx]:
+                self.TransitionMatrix[FromIdx].append((self.LastAction,ToIdx))
 
 
 
