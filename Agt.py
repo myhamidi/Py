@@ -22,7 +22,9 @@ class clsAgent:
     def PerceiveState(self,strState,reward):
         tr.call("clsAgent.PerceiveState")
         idx = self.pvRetIndex(strState,reward)
-        self.SequenceRewards.append((idx,reward))
+        if len(self.SequenceRewards) == 0:r=0
+        else: _,r = self.SequenceRewards[-1]
+        self.SequenceRewards.append((idx,r+reward))
         self.pvExtendTransitionMatrix()
 
     def RetNextAction(self):
