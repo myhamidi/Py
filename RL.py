@@ -40,6 +40,7 @@ class clsEnvironment:
         for tup in lpos:
             row, col = tup
             self.EnvStates[row][col].terminal = True
+            self.EnvStates[row][col].reward = 0
 
     def visualize_show(self,tim):
         tr.call("clsEnvironment.visualize_show")

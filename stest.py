@@ -7,7 +7,7 @@ import RL
 import Agt
 
 #Config
-rows = 5; cols = 10; reward = -1
+rows = 4; cols = 4; reward = -1
 
 #Test
 def test_clsEnvironment_vizualize():
@@ -15,7 +15,7 @@ def test_clsEnvironment_vizualize():
     testEnv = RL.clsEnvironment(rows,cols,reward)
     testEnv.setTerminalStates([(0,0),(rows-1,cols-1)])
     testAgent = Agt.clsAgent(["up","down","left","right"])
-    for k in range(50):
+    for k in range(30):
         for i in range(1000):
 
             if testAgent.StateIsTerminal():
@@ -33,6 +33,10 @@ def test_clsEnvironment_vizualize():
             #Agent perceives the Environment
             testAgent.PerceiveState(testEnv.RetCurrentEnvState(),testEnv.RetReward())
 
+    testAgent.DoBellman(200)
+    f = open("Result.txt","w")
+    for i in range(len(testAgent.RewStates)):
+        f.write(testAgent.RewStates[i].state + ": " + str(testAgent.RewStates[i].value) + "\n")
     return 0
 #</Test>
 

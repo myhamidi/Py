@@ -44,6 +44,19 @@ class clsAgent:
         if self.RewStates[idx].state[-8:] == "terminal":
             return True
         return False
+    
+    def DoBellman(self,iterations):
+        tmpVF = [self.RewStates[i].value for i in range(len(self.RewStates))]
+        for k in range(iterations):
+            for i in range(len(self.TransitionMatrix)):
+                tmpVF[i] = self.RewStates[i].reward
+                n = len(self.TransitionMatrix[i])
+                for j in range(n):
+                    _,idx = self.TransitionMatrix[i][j]
+                    tmpVF[i] = tmpVF[i] + self.RewStates[idx].value/n
+            
+            for i in range(len(self.RewStates)):
+                self.RewStates[i].value = round(tmpVF[i],4)
 
 #Private:
     def pvAppendNewState(self,RewardState):
@@ -66,6 +79,8 @@ class clsAgent:
             ToIdx,_,_ = self.SequenceRewards[-1]
             if not (self.LastAction,ToIdx) in self.TransitionMatrix[FromIdx]:
                 self.TransitionMatrix[FromIdx].append((self.LastAction,ToIdx))
+
+
 
 
 

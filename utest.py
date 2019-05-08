@@ -45,6 +45,8 @@ class testEnv(unittest.TestCase):
         testEnv.setTerminalStates([(0,0),(2,3)])
         self.assertEqual(testEnv.EnvStates[0][0].terminal,True)
         self.assertEqual(testEnv.EnvStates[2][3].terminal,True)
+        self.assertEqual(testEnv.EnvStates[0][0].reward,0)
+        self.assertEqual(testEnv.EnvStates[2][3].reward,0)
         self.assertEqual(testEnv.EnvStates[1][4].terminal,False)
         testEnv.InitRun((2,3))
         self.assertEqual(testEnv.RetCurrentEnvState()[-8:],"terminal")
