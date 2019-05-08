@@ -29,6 +29,9 @@ class clsAgent:
         tr.call("clsAgent.RetNextAction")
         return random.choice(self.actions)
 
+    def IntiSequences(self):
+        self.SequenceRewards =[]
+
     def StateIsTerminal(self):
         tr.call("clsAgent.StateIsTerminal")
         if len(self.SequenceRewards) == 0:

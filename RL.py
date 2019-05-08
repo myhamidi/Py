@@ -26,11 +26,11 @@ class clsEnvironment:
         i,j = pos
         return self.EnvStates[i][j]
 
-    # def RetCurrentEnvState(self):
-    #     row, col = self.currentposition
-    #     if self.EnvStates[row][col].terminal:
-    #         return str(self.currentposition) + "terminal"
-    #     return str(self.currentposition)
+    def RetCurrentEnvState(self):
+        row, col = self.currentposition
+        if self.EnvStates[row][col].terminal:
+            return str(self.currentposition) + "terminal"
+        return str(self.currentposition)
         
     def RetReward(self):
         x,y = self.currentposition

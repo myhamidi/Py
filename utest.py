@@ -41,11 +41,13 @@ class testAgent(unittest.TestCase):
 
 class testEnv(unittest.TestCase):
     def test_SetTerminalState(self):
-        testEnv = RL.clsEnvironment(2,5,-1)
-        testEnv.setTerminalStates([(0,0),(0,1)])
+        testEnv = RL.clsEnvironment(3,5,-1)
+        testEnv.setTerminalStates([(0,0),(2,3)])
         self.assertEqual(testEnv.EnvStates[0][0].terminal,True)
-        self.assertEqual(testEnv.EnvStates[0][1].terminal,True)
+        self.assertEqual(testEnv.EnvStates[2][3].terminal,True)
         self.assertEqual(testEnv.EnvStates[1][4].terminal,False)
+        testEnv.InitRun((2,3))
+        self.assertEqual(testEnv.RetCurrentEnvState()[-8:],"terminal")
 
     def test_initRun(self):
         testEnv = RL.clsEnvironment(3,5,-1)
