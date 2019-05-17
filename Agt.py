@@ -57,6 +57,14 @@ class clsAgent:
             
             for i in range(len(self.RewStates)):
                 self.RewStates[i].value = round(tmpVF[i],4)
+    
+    def Update_ValueFunctionMC(self):
+        _,rsum,_ = self.SequenceRewards[-1]
+        for i in range(len(self.SequenceRewards)):
+            idx,rx,_ = self.SequenceRewards[i]
+            self.RewStates[idx].visited += 1
+            self.RewStates[idx].value += (rsum-rx-self.RewStates[idx].value)/self.RewStates[idx].visited
+
 
 #Private:
     def pvAppendNewState(self,RewardState):
