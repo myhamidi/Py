@@ -19,7 +19,7 @@ def test_clsEnvironment_vizualize():
     testEnv.setTerminalStates([(0,0),(rows-1,cols-1)])
     testAgent = Agt.clsAgent(lactions)
 
-    for k in range(epochs):
+    for _ in range(epochs):
         for i in range(maxsteps):
             if testAgent.StateIsTerminal():
                 #Update Value Function:MC

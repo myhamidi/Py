@@ -47,7 +47,7 @@ class clsAgent:
     
     def DoBellman(self,iterations):
         tmpVF = [self.RewStates[i].value for i in range(len(self.RewStates))]
-        for k in range(iterations):
+        for _ in range(iterations):
             for i in range(len(self.TransitionMatrix)):
                 tmpVF[i] = self.RewStates[i].reward
                 n = len(self.TransitionMatrix[i])

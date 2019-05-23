@@ -1,8 +1,24 @@
 import unittest;import myTracer
 import RL
 import Agt
+import Car
 import random
 
+class testCars(unittest.TestCase):
+    def test_Init(self):
+        testCar =  Car.typCar(0.1,1)
+        testCar.gas()
+        testCar.gas()
+        self.assertEqual(testCar.RetCar(), (0.2,0.3,2))
+        testCar.roll()
+        testCar.roll()
+        self.assertEqual(testCar.RetCar(), (0.4,0.7,2))
+        testCar.brake()
+        self.assertEqual(testCar.RetCar(), (0.5,0.8,1))
+        testCar.brake()
+        self.assertEqual(testCar.RetCar(), (0.6,0.8,0))
+        testCar.brake()
+        self.assertEqual(testCar.RetCar(), (0.7,0.8,0))
 
 class testAgent(unittest.TestCase):
     def test_typRewStat(self):
