@@ -6,19 +6,51 @@ import random
 
 class testCars(unittest.TestCase):
     def test_Init(self):
-        testCar =  Car.typCar(0.1,1)
-        testCar.gas()
-        testCar.gas()
-        self.assertEqual(testCar.RetCar(), (0.2,0.3,2))
-        testCar.roll()
-        testCar.roll()
-        self.assertEqual(testCar.RetCar(), (0.4,0.7,2))
-        testCar.brake()
-        self.assertEqual(testCar.RetCar(), (0.5,0.8,1))
-        testCar.brake()
-        self.assertEqual(testCar.RetCar(), (0.6,0.8,0))
-        testCar.brake()
-        self.assertEqual(testCar.RetCar(), (0.7,0.8,0))
+        testCars = [Car.typCar(0,20,0),Car.typCar(100,20,0),]
+        self.assertEqual(testCars[0].Retxva(), (0,20,0))
+        self.assertEqual(testCars[1].Retxva(), (100,20,0))
+        # for c in range(testCars):
+        #     a=1
+        # testCar.gas()
+        # testCar.gas()
+        # self.assertEqual(testCar.RetCar(), (0.2,0.3,2))
+        # testCar.roll()
+        # testCar.roll()
+        # self.assertEqual(testCar.RetCar(), (0.4,0.7,2))
+        # testCar.brake()
+        # self.assertEqual(testCar.RetCar(), (0.5,0.8,1))
+        # testCar.brake()
+        # self.assertEqual(testCar.RetCar(), (0.6,0.8,0))
+        # testCar.brake()
+        # self.assertEqual(testCar.RetCar(), (0.7,0.8,0))
+
+class testCar(unittest.TestCase):
+    def test_Basics(self):
+        tCar = Car.typCar(0,20,0)
+        tCar.SetA([(0.2,-4)])
+        self.assertEqual(tCar.Retxva(), (0,20,0))
+        tCar.Next()
+        self.assertEqual(tCar.Retxva(), (2,20,0))
+        tCar.Next()
+        self.assertEqual(tCar.Retxva(), (3.98,19.6,-4))
+    
+    def test_Sets(self):
+        tCar = Car.typCar(0,20,0)
+        tCar.SetBrakings([0.1,0.4])
+        tCar.SetAccelerations([0.2,0.3])
+        tCar.SetA([(0.5,-4)])
+                    # t = 0
+        self.assertEqual(tCar.Retxva(), (0,20,0))
+        tCar.Next() # t = 0.1
+        self.assertEqual(tCar.Retxva(), (2,19.9,-1))
+        tCar.Next() # t = 0.2
+        self.assertEqual(tCar.Retxva(), (3.99,19.9,0))
+        tCar.Next() # t = 0.3
+        self.assertEqual(tCar.Retxva(), (5.99, 20.0, 1))
+        tCar.Next() # t = 0.4
+        self.assertEqual(tCar.Retxva(), (7.99, 20.0, 0))
+        tCar.Next() # t = 0.5
+        self.assertEqual(tCar.Retxva(), (9.97, 19.6, -4))
 
 class testAgent(unittest.TestCase):
     def test_typRewStat(self):
