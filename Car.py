@@ -9,10 +9,10 @@ pbMaxBrake = -10
 class CarsMonitor:
     def __init__(self,Cars):
         self.master = tk.Tk()
-        self.w = tk.Canvas(self.master, width=1000, height=200)
+        self.w = tk.Canvas(self.master, width=1500, height=200)
         self.w.pack()
-        self.x = [i for i,j,k in Cars] #current x position of Cars
-        self.element = [self.w.create_rectangle(i, 90, i+10, 100 , fill="black") for i in self.x]
+        self.x = [getattr(Cars[i],"x") for i in range(len(Cars))]
+        self.element = [self.w.create_rectangle(i*10, 90, i*10+10, 100 , fill="black") for i in self.x]
 
     def __getitem__(self,n):
         return self.element[n]
@@ -22,10 +22,14 @@ class CarsMonitor:
         tk.mainloop()
     
     def update(self,Cars):
-        newX = [i for i,j,k in Cars]
+        newX = [getattr(Cars[i],"x") for i in range(len(Cars))]
         dX = [newX[i]-self.x[i] for i in range(len(Cars))]
+        self.x = newX
         for i in range(len(Cars)):
-            self.w.move(self.element[i],dX[i],0)
+            self.w.move(self.element[i],dX[i]*10,0)
+    
+    def setColor(self,n,color):
+        self.w.itemconfig(self.element[n],fill=color)
 
 class typCar:
     def __init__(self,x,v,a):
@@ -87,7 +91,10 @@ class typCar:
         self.a = self.a+pbStep
     
     def pvfx(self):
-        return 0.5*self.a*pbTimeStep*pbTimeStep+self.v*pbTimeStep+self.x
+        if self.v>0:
+            return 0.5*self.a*pbTimeStep*pbTimeStep+self.v*pbTimeStep+self.x
+        else:
+            return self.x
 
     def pvfv(self):
-        return self.a*pbTimeStep + self.v
+        return max(self.a*pbTimeStep + self.v,0)
