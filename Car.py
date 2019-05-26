@@ -1,7 +1,7 @@
 import myTracer;tr = myTracer.glTracer
 
 import tkinter as tk
-pbTimeStep = 0.1
+pbTimeStep = 0.01
 pbStep = 1         #Braking / acceleration increment per time step
 pbMaxBrake = -10
 
@@ -9,7 +9,7 @@ pbMaxBrake = -10
 class CarsMonitor:
     def __init__(self,Cars):
         self.master = tk.Tk()
-        self.w = tk.Canvas(self.master, width=1500, height=200)
+        self.w = tk.Canvas(self.master, width=1800, height=200)
         self.w.pack()
         self.x = [getattr(Cars[i],"x") for i in range(len(Cars))]
         self.element = [self.w.create_rectangle(i*10, 90, i*10+10, 100 , fill="black") for i in self.x]
