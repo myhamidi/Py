@@ -50,7 +50,7 @@ class typCar:
         self.v = v
         self.a = a
     
-    def SetA(self,ListA):
+    def SetPlanA(self,ListA):
          self.PlanA = ListA
     
     def SetBrakings(self,ListBrakings):
@@ -64,8 +64,8 @@ class typCar:
         self.pcCheckPlanBrakes()
         self.pcCheckPlanGas()
         self.pvCheckPlanA()
-        self.x = round(self.pvfx(),2)
-        self.v = round(self.pvfv(),2)
+        self.x = round(self.pvfx(),5)
+        self.v = round(self.pvfv(),5)
 
 #private:
     def pcCheckPlanBrakes(self):

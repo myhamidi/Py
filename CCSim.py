@@ -11,12 +11,12 @@ class clsCCSim:
         self.Monitor.setColor(0,"red")
 
     def setAccBehaviour(self,a,b):
-        self.Cars[0].SetA(a)
-        self.Cars[1].SetA(b)
+        self.Cars[0].SetPlanA(a)
+        self.Cars[1].SetPlanA(b)
 
     def RunSim(self):
         self.Monitor.show(1000)
-        for i in range(int(self.SimDauer/Car.pbTimeStep)):
+        for _ in range(int(self.SimDauer/Car.pbTimeStep)):
             for j in range(len(self.Cars)):
                 self.Cars[j].Next()
             if self.Cars[1].x < self.Cars[0].x and not self.Crash:
