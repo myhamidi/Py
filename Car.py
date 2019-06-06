@@ -84,17 +84,19 @@ class typCar:
                 self.a = a[i]
 
     def pvbrake(self):
-        if self.a >= pbMaxBrake:
+        if self.a >= pbMaxBrake and self.v>0:
             self.a = self.a-pbStep
 
     def pvgas(self):
         self.a = self.a+pbStep
     
     def pvfx(self):
-        if self.v>0:
+        if self.v>1:
             return 0.5*self.a*pbTimeStep*pbTimeStep+self.v*pbTimeStep+self.x
         else:
             return self.x
 
     def pvfv(self):
-        return max(self.a*pbTimeStep + self.v,0)
+        if self.v>1:
+            return max(self.a*pbTimeStep + self.v,0)
+        return 0
