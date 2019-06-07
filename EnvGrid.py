@@ -30,7 +30,8 @@ class clsEnvironment:
 
     def RetCurrentEnvState(self):
         row, col = self.currentposition
-        if self.EnvStates[row][col].terminal:
+        if self.EnvStates[row][col].terminal== True:
+            self.run += 1
             return str(self.currentposition) + "terminal"
         return str(self.currentposition)
         
@@ -41,6 +42,7 @@ class clsEnvironment:
     def RetState(self):
         row, col = self.currentposition
         if self.EnvStates[row][col].terminal==True:
+            self.run += 1
             return str(self.currentposition) + "terminal1"
         return str(self.currentposition)
 
@@ -56,7 +58,9 @@ class clsEnvironment:
 
     def visualize_update(self):
         tr.call("clsEnvironment.visualize_update")
-        self.Grid.update(self.currentposition)
+        terminal = False
+        if "terminal" in str(self.RetState()):terminal = True
+        self.Grid.update(self.currentposition,self.step,self.run,terminal)
     
     def move(self,direction):
         tr.call("clsEnvironment.move")
@@ -93,8 +97,10 @@ class clsEnvironment:
         self.Grid.show(1000,0,0)
     
     def MonitorUpdate(self):
-        self.Grid.update(self.currentposition)
-        self.Grid.show(100,0,0)
+        terminal = False
+        if "terminal" in str(self.RetState()):terminal = True
+        self.Grid.update(self.currentposition,self.step,self.run,terminal)
+        self.Grid.show(50,0,0)
 
 class clsGrid:
     def __init__(self,rows,cols):
@@ -128,9 +134,10 @@ class clsGrid:
         self.txt_elements = [[self.w.create_text((25+50*i, self.TextHeight+25+50*j), text=str(j)+str(i)) for i in range(self.limit_cols)] for j in range(self.limit_rows)]
        
 
-    def update(self,currentposition):
+    def update(self,currentposition,step,run,terminal):
         tr.call("clsGrid.update")
         x,y = currentposition
         self.res()
         self.w.itemconfig(self.element[x][y],fill="#3395E4")
-        self.w.itemconfig(self.txt_header,text="Run: " + str(self.EnvRuns) + ". Step: " + str(self.EnvSteps))
+        if terminal == True: self.w.itemconfig(self.element[x][y],fill="#119111")
+        self.w.itemconfig(self.txt_header,text="Run: " + str(run) + ". Step: " + str(step))

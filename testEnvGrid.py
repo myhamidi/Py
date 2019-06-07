@@ -1,5 +1,6 @@
 import EnvGrid
 import Agt
+import random
 
 ### Parameter:
 
@@ -10,17 +11,31 @@ Env.MonitorStart()
 
 ### Config
 Env.setTerminalStates([(0,0),(7,7)])
-Env.SetStart((0,3))
+Env.SetStart((0,7))
 
 ### Run
-for i in range(int(10000)):
-    # Env.MonitorUpdate()
-
+f01 = 100000
+for i in range(int(f01)):
+    eps = 1
+   # eps = 1-i/2*f01
     Agt.PerceiveState(Env.RetState(),Env.RetReward())
-    Env.Next(Agt.RetNextAction())
+#     Env.Next(Agt.RetNextAction("random"))
+    Env.Next(Agt.NextAction(eps))
     if "terminal" in str(Env.RetState()):
         Agt.PerceiveState(Env.RetState(),Env.RetReward())
         Env.Reset()
+        Env.SetStart((random.randint(0,7),(random.randint(0,7))))
+    if i%100 == 0: print(i)
+
+for _ in range(100):
+    Env.MonitorUpdate()
+    Agt.TakeState(Env.RetState(),Env.RetReward())
+    Env.Next(Agt.RetNextAction("greedy"))
+    if "terminal" in str(Env.RetState()):
+        Env.MonitorUpdate()
+        Agt.TakeState(Env.RetState(),Env.RetReward())
+        Env.Reset()
+        Env.SetStart((random.randint(0,7),(random.randint(0,7))))
 
 ### Print Sequences of Run
 f = open("SeqRews-Grid.csv","w")
