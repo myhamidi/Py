@@ -23,7 +23,10 @@ class clsAgent:
         self.Q = []
         #Parameters:
         self.alpha = .2
-        self.gamma = 1
+        self.gamma = 0.9
+        self.rand = list(range(1000))
+        random.shuffle(self.rand)
+        self.randIdx = 0
 
     def PerceiveState(self,strState,reward):
         tr.call("clsAgent.PerceiveState")
@@ -33,18 +36,41 @@ class clsAgent:
         self.SequenceRewards.append((idx,round(r+reward,1),self.LastActionInt))
         self.pvExtendTransitionMatrix()
         self.pvUpdateQ(self.alpha,self.gamma)
+    
+    def TakeState(self,strState,reward):
+        idx = self.pvRetIndex(strState,0)
+        if len(self.SequenceRewards) == 0:r=0
+        else: _,r,_ = self.SequenceRewards[-1]
+        self.SequenceRewards.append((idx,round(r+reward,1),self.LastActionInt))
 
-    def RetNextAction(self):
-        tr.call("clsAgent.RetNextAction")
-        #Random
-        self.LastAction = random.choice(self.actions)
-        self.LastActionInt =self.actions.index(self.LastAction)
-        # #Greedy
-        # s,_,_ = self.SequenceRewards[-1]        
-        # self.LastActionInt = self.Q[s].index(max(self.Q[s]))
-        # self.LastAction = self.actions[self.LastActionInt]
+    def NextAction(self,epsilon):
+        self.randIdx +=1
+        if self.randIdx == 1000: self.randIdx = 0
+        rand = self.rand[self.randIdx]/1000
+        if rand < epsilon:
+            return self.RetNextAction("random")
+        else:
+            return self.RetNextAction("greedy")
+    
+    def RetNextAction(self,policy):
+        if policy == "random":
+            self.LastAction = random.choice(self.actions)
+            self.LastActionInt =self.actions.index(self.LastAction)
+            return self.LastAction
+        if policy == "greedy":
+            s,_,_ = self.SequenceRewards[-1]        
+            self.LastActionInt = self.Q[s].index(max(self.Q[s]))
+            self.LastAction = self.actions[self.LastActionInt]
+            return self.LastAction
         #Return
-        return self.LastAction
+        return ""
+
+    def RetTotalReward(self):
+        _,r,_ = self.SequenceRewards[-1]
+        return r
+    
+    def SequenceRewardsReset(self):
+        self.SequenceRewards = []
 
     def IntiSequences(self):
         self.SequenceRewards =[]
