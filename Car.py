@@ -1,6 +1,8 @@
 import myTracer;tr = myTracer.glTracer
 
 import tkinter as tk
+
+#Parameter
 pbTimeStep = 0.01
 pbStep = 1         #Braking / acceleration increment per time step
 pbMaxBrake = -10
@@ -59,13 +61,14 @@ class typCar:
     def SetAccelerations(self,ListAccelerations):
         self.PlanGas= ListAccelerations
 
-    def Next(self):
+    def NextTimeCycle(self):
         self.time = round(self.time + pbTimeStep,2)
         self.pcCheckPlanBrakes()
         self.pcCheckPlanGas()
-        self.pvCheckPlanA()
-        self.x = round(self.pvfx(),5)
-        self.v = round(self.pvfv(),5)
+        self.pvCheckPlanSetA()
+        self.x = self.pvfx()
+        self.v = self.pvfv()
+        self.a = self.pvfa()
 
 #private:
     def pcCheckPlanBrakes(self):
@@ -76,7 +79,7 @@ class typCar:
         if self.time in self.PlanGas:
             self.pvgas()
 
-    def pvCheckPlanA(self):
+    def pvCheckPlanSetA(self):
         t = [i for i,j in self.PlanA]
         a = [j for i,j in self.PlanA]
         for i in range(len(t)):
@@ -89,12 +92,16 @@ class typCar:
 
     def pvgas(self):
         self.a = self.a+pbStep
+
+    def pvfa(self):
+        if self.v >1:
+            return self.a
+        return 0
     
     def pvfx(self):
         if self.v>1:
             return 0.5*self.a*pbTimeStep*pbTimeStep+self.v*pbTimeStep+self.x
-        else:
-            return self.x
+        return self.x
 
     def pvfv(self):
         if self.v>1:
