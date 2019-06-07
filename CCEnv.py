@@ -1,84 +1,120 @@
 import Car
 
+
+#Parameter
+BrakeRatio = 2      # Ratio Braking/Gas -> Brake more than Accelerate in random actions
+MaxTimeCycles = 100 # after 1 sec
+
 class clsCCEnv:
-    def __init__(self,StartSpeed, StartDistance,BrakeInc):
+    def __init__(self,StartSpeed, StartDistance,BrakeInc,StateReturnOnNextxvat,StateReturnOnDelta):
         self.StartV = StartSpeed/3.6
         self.StartX = StartDistance
-        self.Crash = False
+        self.terminal = ""
         self.Cars = [Car.typCar(0,self.StartV,0),Car.typCar(self.StartX,self.StartV,0)]
         self.Actions = ["brake","releasebrake"]
         self.BrakeInc = BrakeInc
+        self.StateReturnAfterMaxTimeCycles = MaxTimeCycles # after 1 sec
+        self.StateReturnOnNextxvat = StateReturnOnNextxvat  #x OR v OR a OR t
+        self.StateReturnOnDelta = StateReturnOnDelta
+        self.RetStateStyle = [True,True,True,True] #x,v,a,t
         #tkinter:
         self.SimDauer = 10
         self.Monitor = Car.CarsMonitor(self.Cars)
         self.Monitor.setColor(0,"red")
 
-
-    def setConstraint(self,a):
+    def setConstraint0(self,a):
         self.Cars[0].SetPlanA(a)
+
+    def setConstraint1(self,a):
+        self.Cars[1].SetPlanA(a)
+
+    def InitRetStateStyle(self,StateStyle):
+        self.RetStateStyle[0],self.RetStateStyle[1],self.RetStateStyle[2],self.RetStateStyle[3] = StateStyle
     
     def ReturnActionList(self):
         return self.Actions
 
-    def Next(self,action):
+    def Next(self,action,monitor):
         x,v,a = self.Cars[1].Retxva()
-        if action == "brake" and self.Cars[1].v>0:
-           self.Cars[1].Setxva(x,v,a-5*self.BrakeInc)
-        if action == "releasebrake" and a<0:
-           self.Cars[1].Setxva(x,v,min(a+self.BrakeInc,0))
+        if action == "brake" and v>0:
+           self.Cars[1].Setxva(x, v, a - BrakeRatio * self.BrakeInc)
+        if action == "releasebrake" and a < 0:
+           self.Cars[1].Setxva(x ,v ,min(a + self.BrakeInc, 0))
         if action == "gas":
-           self.Cars[1].Setxva(x,v,a+self.BrakeInc)
-        self.LetRollUntilDeltaV(1,100)
+           self.Cars[1].Setxva(x, v, a + self.BrakeInc)
+        
+        self.LetRollUntilNextState(monitor)
 
         return self.Cars[1].Retxva()
 
-    def LetRollUntilDeltaV(self,DeltaV,maxRoll):
-        _,tmpv,_ = self.Cars[1].Retxva()
-        _,v,_ = self.Cars[1].Retxva()
-        for _ in range(1,maxRoll):
-            if abs(tmpv-v) < DeltaV:
-                for j in range(len(self.Cars)):
-                    self.Cars[j].Next()
-                _,v,_ = self.Cars[1].Retxva()
+    def LetRollUntilNextState(self,monitor):
+        tx,tv,ta = self.Cars[1].Retxva()
+        tt = self.Cars[1].time
+        for _ in range(1,self.StateReturnAfterMaxTimeCycles):
+            if monitor == "monitor": self.MonitorUpdate()
+            x,v,a = self.Cars[1].Retxva()
+            t = self.Cars[1].time
+            if self.StateReturnOnNextxvat == "x":
+                if  abs(tx-x) < self.StateReturnOnDelta:
+                    self.Cars[0].NextTimeCycle()
+                    self.Cars[1].NextTimeCycle()
+            if self.StateReturnOnNextxvat == "v":
+                if  abs(tv-v) < self.StateReturnOnDelta:
+                    self.Cars[0].NextTimeCycle()
+                    self.Cars[1].NextTimeCycle()
+            if self.StateReturnOnNextxvat == "a":
+                if  abs(ta-a) < self.StateReturnOnDelta:
+                    self.Cars[0].NextTimeCycle()
+                    self.Cars[1].NextTimeCycle()
+            if self.StateReturnOnNextxvat == "t":
+                if  tt-t < self.StateReturnOnDelta:
+                    self.Cars[0].NextTimeCycle()
+                    self.Cars[1].NextTimeCycle()
+        
 
-    def RetState(self):
-        _,v,a = self.Cars[1].Retxva()
-        if self.pvRetDisance() <=0:
-            return str(round(v,0)) + ","+ str(round(2*a,0)/2)+"terminal0"
+    def RetState(self): 
+        if self.pvRetDisance() <= 0:
+            self.terminal = "Crash"
+            return "terminalCrash"
         _,v0,_ = self.Cars[0].Retxva() 
         if v0 == 0:
-            return str(round(v,0)) + ","+ str(round(2*a,0)/2)+"terminal1"
-        return str(round(v,0)) + ","+ str(round(2*a,0)/2)
+            self.terminal = "Safe"
+            return "terminalSafe"
+        x,v,a = self.Cars[1].Retxva()
+        t = self.Cars[1].time
+        Ret = ""
+        if self.RetStateStyle[0] == True: Ret += str(round(x)) + " , "
+        if self.RetStateStyle[1] == True: Ret += str(round(v))+ " , "
+        if self.RetStateStyle[2] == True: Ret += str(round(2*a,0)/2)+ " , "
+        if self.RetStateStyle[3] == True: Ret += str(round(t))
+        return Ret
     
     def ReturnReward(self):
-        if self.pvRetDisance() <=0:
-            return -50*(self.Cars[0].v-self.Cars[1].v)
-        return round(-self.Cars[1].a,1)/10
+        if self.terminal == "Crash":
+            return -50*(self.Cars[0].v-self.Cars[1].v)-1000
+        if self.terminal == "Safe":
+            return 1000
+        return round(-1*self.Cars[1].a,1)/10
     
     def Reset(self):
         self.Cars[0].Setxva(0,self.StartV,0)
         self.Cars[1].Setxva(self.StartX,self.StartV,0)
+        self.Cars[0].time = 0
+        self.Cars[1].time = 0
+        self.terminal = ""
 
     def MonitorStart(self):
         self.Monitor.show(1000)
 
     def MonitorUpdate(self):
         self.Monitor.update(self.Cars)
-        self.Monitor.show(int(1000*Car.pbTimeStep))
-
-    #private:
-    # def pvIsTerminal(self):
-    #     if self.pvRetDisance() <=0:
-    #         return "terminal"
-    #     # _,State,_ = self.Cars[1].Retxva()
-    #     # if State == 0:
-    #     #     return True
-    #     return 
+        self.Monitor.show(int(100*Car.pbTimeStep))
+        # self.Monitor.show(int(tim*1000*Car.pbTimeStep))
 
     def pvRetDisance(self):
         x0,_,_ = self.Cars[0].Retxva()
         x1,_,_ = self.Cars[1].Retxva()
-        return round(x1-x0,1)
+        return x1-x0
 
 
 
