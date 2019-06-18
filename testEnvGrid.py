@@ -1,56 +1,67 @@
 import EnvGrid
 import Agt
-import random
 
 ### Parameter:
+GZx = 10
+GZy = 10
 
-### Init Environment and Agent
-Env = EnvGrid.clsEnvironment(8,8,-1)
+### Init
+Env = EnvGrid.clsEnvironment(GZx,GZy,-1)
 Agt = Agt.clsAgent(Env.ReturnActionList())
-Env.MonitorStart()
 
 ### Config
-Env.setTerminalStates([(0,0),(7,7)])
-Env.SetStart((0,7))
+Env.SetTerminalState((0,0)); Env.SetRewardAtState((0,0),0)
+Env.SetTerminalState((GZx-1,GZy-1)); Env.SetRewardAtState((GZx-1,GZy-1),0)
+Env.SetRestartPosition((int(GZx/2),int(GZy/2)))
 
-### Run
-f01 = 100000
-for i in range(int(f01)):
-    eps = 1
-   # eps = 1-i/2*f01
+### Train
+c = 0; runs_train = 3000
+while c < runs_train:
     Agt.PerceiveState(Env.RetState(),Env.RetReward())
-#     Env.Next(Agt.RetNextAction("random"))
+    if Env.IsStateTerminal():
+        c+=1
+        Env.Reset()
+    if c%100 == 0: 
+        print("Train Step: " + str(c),end ='\r')
+    eps = 1-c/runs_train
     Env.Next(Agt.NextAction(eps))
-    if "terminal" in str(Env.RetState()):
-        Agt.PerceiveState(Env.RetState(),Env.RetReward())
-        Env.Reset()
-        Env.SetStart((random.randint(0,7),(random.randint(0,7))))
-    if i%100 == 0: print(i)
 
-for _ in range(100):
-    Env.MonitorUpdate()
+### Test
+tmpState = ""; c = 0; runs_train = 10 #2*(GZ-1)
+Env.SetRandomStart()
+while c < runs_train:
     Agt.TakeState(Env.RetState(),Env.RetReward())
-    Env.Next(Agt.RetNextAction("greedy"))
-    if "terminal" in str(Env.RetState()):
-        Env.MonitorUpdate()
-        Agt.TakeState(Env.RetState(),Env.RetReward())
+    Env.render(0.1,"InTKinter")   #"InConsole"
+    if Env.RetState() == tmpState:
+        print("error - No State Change during Test " + tmpState + " " + str(c))
+        break
+    tmpState = Env.RetState()
+    if Env.IsStateTerminal():
+        tmpState = ""; c+=1
         Env.Reset()
-        Env.SetStart((random.randint(0,7),(random.randint(0,7))))
+        Env.SetRandomStart()
+    eps = 0
+    Env.Next(Agt.NextAction(eps))
+
+# # myTracer
+# arr = EnvGrid.tr.getCalls()
+# print(*arr, sep="\n")
 
 ### Print Sequences of Run
 f = open("SeqRews-Grid.csv","w")
 q = open("Q-Grid.csv","w")
 f.write("stateIndex,state,reward,actionIndex\n")
 for i in range(len(Agt.SequenceRewards)):
-    s,r,a = Agt.SequenceRewards[i]
+    s,r,a,ty = Agt.SequenceRewards[i]
     va = Agt.RewStates[s].state
-#     Qs = [round(Agt.Q[s][0]),round(Agt.Q[s][1]),round(Agt.Q[s][2]),round(Agt.Q[s][3])]
-#     Q = str(Qs).replace("[","").replace("]","")
-    f.write(str(s) + "," + str(va) + ","+str(r) + ","+str(a) +"\n")
+    f.write(str(s) + "," + str(va) + ","+str(r) + ","+str(a) + "," + str(ty) + "\n")
 
 q.write("state,Q:up,Q:down,Q:left,Q:right,visited\n")
 for i in range(len(Agt.Q)):
     va = Agt.RewStates[i].state
-    Qi = [round(Agt.Q[i][0]),round(Agt.Q[i][1]),round(Agt.Q[i][2]),round(Agt.Q[i][3])]
+    if len(Env.ReturnActionList()) == 2:
+        Qi = [round(Agt.Q[i][0],4),round(Agt.Q[i][1],4)]
+    if len(Env.ReturnActionList()) == 4:
+        Qi = [round(Agt.Q[i][0],4),round(Agt.Q[i][1],4),round(Agt.Q[i][2],4),round(Agt.Q[i][3],4)]
     Q = str(Qi).replace("[","").replace("]","")
-    q.write(str(va) + "," + Q + "," + str(Agt.RewStates[i].visited) +"\n")
+    q.write(str(va) + ";" + Q + ";" + str(Agt.RewStates[i].visited) +"\n")

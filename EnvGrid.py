@@ -1,6 +1,8 @@
 import myTracer;tr = myTracer.glTracer
-
 import tkinter as tk
+import random
+import os
+import time
 
 class typGridState:
     def __init__(self,x,y,r,t):
@@ -21,47 +23,61 @@ class clsEnvironment:
         self.limit_rows = rows
         self.step = 0
         self.run = 0
+        self.TKinterInit = False
         self.actions = ["up","down","left","right"]
+        if rows == 1:
+            self.actions = ["left","right"]
+        if cols == 1:
+            self.actions = ["up","down"]
 
     def __getitem__(self,pos):
         tr.call("clsEnvironment.__getitem__")
         i,j = pos
         return self.EnvStates[i][j]
 
-    def RetCurrentEnvState(self):
-        row, col = self.currentposition
-        if self.EnvStates[row][col].terminal== True:
-            self.run += 1
-            return str(self.currentposition) + "terminal"
-        return str(self.currentposition)
-        
+    def SetRestartPosition(self,StartPosition):
+        r,c = StartPosition
+        if r >= 0 and r < self.limit_rows and c >= 0 and c < self.limit_cols:
+            self.start = StartPosition
+            self.currentposition = StartPosition
+        else:
+            print("error - SetStart")
+    
+    def SetRandomStart(self):
+        r = random.randint(0,self.limit_rows-1)
+        c = random.randint(0, self.limit_cols-1)
+        self.start = (r,c)
+        self.currentposition = (r,c)
+
+    def SetTerminalState(self,pos):
+        tr.call("clsEnv.setTerminalState")
+        row, col = pos
+        self.EnvStates[row][col].terminal = True
+
+    def SetRewardAtState(self,pos,Reward):
+        tr.call("clsEnv.setRewardAtState")
+        row, col = pos
+        self.EnvStates[row][col].reward = Reward
+
     def RetReward(self):
+        tr.call("clsEnv.RetReward")
         x,y = self.currentposition
         return self.EnvStates[x][y].reward
 
     def RetState(self):
-        row, col = self.currentposition
-        if self.EnvStates[row][col].terminal==True:
+        tr.call("clsEnv.RetState")
+        if self.IsStateTerminal() == True:
             self.run += 1
             return str(self.currentposition) + "terminal1"
         return str(self.currentposition)
 
-    def setTerminalStates(self,lpos):
-        for tup in lpos:
-            row, col = tup
-            self.EnvStates[row][col].terminal = True
-            self.EnvStates[row][col].reward = 0
+    def IsStateTerminal(self):
+        tr.call("clsEnv.IsStateTerminal")
+        row, col = self.currentposition
+        if self.EnvStates[row][col].terminal==True:
+            return True
+        return False
 
-    def visualize_show(self,tim):
-        tr.call("clsEnvironment.visualize_show")
-        self.Grid.show(tim,self.step,self.run)
-
-    def visualize_update(self):
-        tr.call("clsEnvironment.visualize_update")
-        terminal = False
-        if "terminal" in str(self.RetState()):terminal = True
-        self.Grid.update(self.currentposition,self.step,self.run,terminal)
-    
     def move(self,direction):
         tr.call("clsEnvironment.move")
         self.step = self.step +1
@@ -74,33 +90,57 @@ class clsEnvironment:
             self.currentposition = (r-1,c)
         elif direction == "down" and r < self.limit_rows-1:
             self.currentposition = (r+1,c)
-    
-    def InitRun(self,StartPosition):
-        tr.call("clsEnvironment.InitRun")
-        self.step = 0
-        self.run = self.run+1
-        self.currentposition = self.start
 
     def ReturnActionList(self):
+        tr.call("clsEnv.returnActionList")
         return self.actions
 
     def Next(self,action):
         self.move(action)
 
     def Reset(self):
-        self.InitRun(self.start)
+        self.step = 0
+        self.run = self.run+1
+        self.currentposition = self.start
 
-    def SetStart(self,StartPosition):
-        self.start = StartPosition
+    def render(self,tim,typ):
+        if typ == "InConsole":
+            self.render_Console(tim)
+        if typ == "InTKinter":
+            self.MonitorUpdate(tim)
+
+    def render_Console(self,tim):
+        GridString = "+-------+"
+        emptyField = "| "
+        egoField = "|o"
+        tField = "|X"
+        os.system('cls')
+        for i in range(self.limit_rows):
+            GridString += "\n"
+            for j in range(self.limit_cols):
+                if (i,j) == self.currentposition:
+                    GridString += egoField
+                elif self.EnvStates[i][j].terminal==True:
+                    GridString += tField
+                else:
+                    GridString += emptyField
+            GridString += "|" 
+        GridString += "\n+-------+"
+        GridString += "\n"
+        GridString += "Position:" + str(self.currentposition)
+        print(GridString)
+        time.sleep(tim)
+        os.system('cls')
     
-    def MonitorStart(self):
-        self.Grid.show(1000,0,0)
-    
-    def MonitorUpdate(self):
+    def MonitorUpdate(self,tim):
+        tr.call("clsEnvironment.MonitorUpdate")
+        if self.TKinterInit == False:
+            self.Grid.show(int(tim*1000),0,0)
+            self.TKinterInit = True
         terminal = False
         if "terminal" in str(self.RetState()):terminal = True
         self.Grid.update(self.currentposition,self.step,self.run,terminal)
-        self.Grid.show(50,0,0)
+        self.Grid.show(int(tim*1000),0,0)
 
 class clsGrid:
     def __init__(self,rows,cols):
