@@ -15,15 +15,16 @@ class clsAgent:
     def __init__(self,actionlist):
         tr.call("clsAgent.init")
         self.RewStates = []         #Typ: typRewState. Remembers all (unique) states visited.
-        self.SequenceRewards = []   #Typ: (s,r,a). Remembers state (idx), reward and action
+        self.SequenceRewards = []   #Typ: (s,r,a,actionType). Remembers state (idx), reward and action
         self.TransitionMatrix = []  #Typ: List of Lists [[],[],...]
         self.actions = actionlist
         self.LastAction = ""
+        self.LastActionType = "" #g,r (greedy, random)
         self.LastActionInt = 0
         self.Q = []
         #Parameters:
         self.alpha = .2
-        self.gamma = 0.9
+        self.gamma = 1
         self.rand = list(range(1000))
         random.shuffle(self.rand)
         self.randIdx = 0
@@ -32,21 +33,23 @@ class clsAgent:
         tr.call("clsAgent.PerceiveState")
         idx = self.pvRetIndex(strState,reward)
         if len(self.SequenceRewards) == 0:r=0
-        else: _,r,_ = self.SequenceRewards[-1]
-        self.SequenceRewards.append((idx,round(r+reward,1),self.LastActionInt))
+        else: _,r,_,_ = self.SequenceRewards[-1]
+        self.SequenceRewards.append((idx,round(r+reward,1),self.LastActionInt,self.LastActionType))
         self.pvExtendTransitionMatrix()
         self.pvUpdateQ(self.alpha,self.gamma)
     
     def TakeState(self,strState,reward):
         idx = self.pvRetIndex(strState,0)
         if len(self.SequenceRewards) == 0:r=0
-        else: _,r,_ = self.SequenceRewards[-1]
-        self.SequenceRewards.append((idx,round(r+reward,1),self.LastActionInt))
+        else: _,r,_,_ = self.SequenceRewards[-1]
+        self.SequenceRewards.append((idx,round(r+reward,1),self.LastActionInt,self.LastActionType))
 
     def NextAction(self,epsilon):
+        # Get Next Random Number from list
         self.randIdx +=1
         if self.randIdx == 1000: self.randIdx = 0
         rand = self.rand[self.randIdx]/1000
+
         if rand < epsilon:
             return self.RetNextAction("random")
         else:
@@ -56,17 +59,19 @@ class clsAgent:
         if policy == "random":
             self.LastAction = random.choice(self.actions)
             self.LastActionInt =self.actions.index(self.LastAction)
+            self.LastActionType = "r"
             return self.LastAction
         if policy == "greedy":
-            s,_,_ = self.SequenceRewards[-1]        
+            s,_,_,_ = self.SequenceRewards[-1]        
             self.LastActionInt = self.Q[s].index(max(self.Q[s]))
             self.LastAction = self.actions[self.LastActionInt]
+            self.LastActionType = "g"
             return self.LastAction
         #Return
         return ""
 
     def RetTotalReward(self):
-        _,r,_ = self.SequenceRewards[-1]
+        _,r,_,_ = self.SequenceRewards[-1]
         return r
     
     def SequenceRewardsReset(self):
@@ -93,9 +98,9 @@ class clsAgent:
                 self.RewStates[i].value = round(tmpVF[i],4)
     
     def Update_ValueFunctionMC(self):
-        _,rsum,_ = self.SequenceRewards[-1]
+        _,rsum,_,_ = self.SequenceRewards[-1]
         for i in range(len(self.SequenceRewards)):
-            idx,rx,_ = self.SequenceRewards[i]
+            idx,rx,_,_ = self.SequenceRewards[i]
             self.RewStates[idx].visited += 1
             self.RewStates[idx].value += (rsum-rx-self.RewStates[idx].value)/self.RewStates[idx].visited
 
@@ -122,8 +127,8 @@ class clsAgent:
     def pvExtendTransitionMatrix(self): #Type StateTransition: (1,3). From 1 to 3
         tr.call("clsAgent.pvExtendTransitionMatrix")
         if len (self.SequenceRewards)>1: #start from 2nd step
-            FromIdx,_,_ = self.SequenceRewards[-2]
-            ToIdx,_,_ = self.SequenceRewards[-1]
+            FromIdx,_,_,_ = self.SequenceRewards[-2]
+            ToIdx,_,_,_ = self.SequenceRewards[-1]
             if not (self.LastAction,ToIdx) in self.TransitionMatrix[FromIdx]:
                 self.TransitionMatrix[FromIdx].append((self.LastAction,ToIdx))
 
@@ -134,11 +139,11 @@ class clsAgent:
     
     def pvUpdateQ(self,alpha, gamma):
         if len(self.SequenceRewards)<3: return
-        s1,r1,a = self.SequenceRewards[-1]
-        s,r,_ = self.SequenceRewards[-2]
+        s1,r1,a,ty = self.SequenceRewards[-1]
+        s,r,_,_ = self.SequenceRewards[-2]
         r = r1-r
         if "terminal" in str(self.RewStates[s].state):
-            self.SequenceRewards[-1] = (s1,0,a)
+            self.SequenceRewards[-1] = (s1,0,a,ty)
             return
         self.Q[s][a] = self.Q[s][a] + alpha*(r +gamma*max(self.Q[s1]) - self.Q[s][a])
                        
