@@ -43,25 +43,10 @@ while c < runs_train:
     eps = 0
     Env.Next(Agt.NextAction(eps))
 
-# # myTracer
-# arr = EnvGrid.tr.getCalls()
-# print(*arr, sep="\n")
+### Print Results
+Agt.printSequence("SeqRews-Grid.csv","w")
+Agt.printQ("Q-TrMa.csv","w")
 
-### Print Sequences of Run
-f = open("SeqRews-Grid.csv","w")
-q = open("Q-Grid.csv","w")
-f.write("stateIndex,state,reward,actionIndex\n")
-for i in range(len(Agt.SequenceRewards)):
-    s,r,a,ty = Agt.SequenceRewards[i]
-    va = Agt.RewStates[s].state
-    f.write(str(s) + "," + str(va) + ","+str(r) + ","+str(a) + "," + str(ty) + "\n")
 
-q.write("state,Q:up,Q:down,Q:left,Q:right,visited\n")
-for i in range(len(Agt.Q)):
-    va = Agt.RewStates[i].state
-    if len(Env.ReturnActionList()) == 2:
-        Qi = [round(Agt.Q[i][0],4),round(Agt.Q[i][1],4)]
-    if len(Env.ReturnActionList()) == 4:
-        Qi = [round(Agt.Q[i][0],4),round(Agt.Q[i][1],4),round(Agt.Q[i][2],4),round(Agt.Q[i][3],4)]
-    Q = str(Qi).replace("[","").replace("]","")
-    q.write(str(va) + ";" + Q + ";" + str(Agt.RewStates[i].visited) +"\n")
+### myTracer
+# arr = EnvGrid.tr.getCalls();# print(*arr, sep="\n")

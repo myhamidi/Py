@@ -16,7 +16,7 @@ class clsAgent:
         tr.call("clsAgent.init")
         self.RewStates = []         #Typ: typRewState. Remembers all (unique) states visited.
         self.SequenceRewards = []   #Typ: (s,r,a,actionType). Remembers state (idx), reward and action
-        self.TransitionMatrix = []  #Typ: List of Lists [[],[],...]
+        self.TransitionMatrix = []  #Typ: List of Lists of tuples[[],[],...]
         self.actions = actionlist
         self.LastAction = ""
         self.LastActionType = "" #g,r (greedy, random)
@@ -131,6 +131,7 @@ class clsAgent:
             ToIdx,_,_,_ = self.SequenceRewards[-1]
             if not (self.LastAction,ToIdx) in self.TransitionMatrix[FromIdx]:
                 self.TransitionMatrix[FromIdx].append((self.LastAction,ToIdx))
+                self.TransitionMatrix[FromIdx].sort()
 
     def pvExtendQ(self):
         self.Q.append([])
@@ -146,6 +147,25 @@ class clsAgent:
             self.SequenceRewards[-1] = (s1,0,a,ty)
             return
         self.Q[s][a] = self.Q[s][a] + alpha*(r +gamma*max(self.Q[s1]) - self.Q[s][a])
-                       
+
+    def printQ(self,textfile,xwr):
+        f = open(textfile,xwr)
+        f.write("Transitions\n")
+        f.write("state|visited|q1|q2\n")    
+        for i in range(len(self.TransitionMatrix)):
+            tmpstr = self.RewStates[i].state + "|" + str(self.RewStates[i].visited) + "|" 
+            for j in range(len(self.TransitionMatrix[i])):
+                a,toState = self.TransitionMatrix[i][j]
+                tmpstr += a + self.RewStates[toState].state + "Q:" + str(round(self.Q[i][0],4)) + "|"
+            f.write(tmpstr + "\n")    
+
+    def printSequence(self,textfile,xwr):
+        f = open(textfile,xwr)
+        f.write("Sequences\n")
+        f.write("stateIndex,state,reward,actionIndex\n")
+        for i in range(len(self.SequenceRewards)):
+            s,r,a,ty = self.SequenceRewards[i]
+            va = self.RewStates[s].state
+            f.write(str(s) + "," + str(va) + ","+str(r) + ","+str(a) + "," + str(ty) + "\n")         
 
 
