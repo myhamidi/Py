@@ -156,16 +156,17 @@ class clsAgent:
             tmpstr = self.RewStates[i].state + "|" + str(self.RewStates[i].visited) + "|" 
             for j in range(len(self.TransitionMatrix[i])):
                 a,toState = self.TransitionMatrix[i][j]
-                tmpstr += a + self.RewStates[toState].state + "Q:" + str(round(self.Q[i][0],4)) + "|"
+                aIdx = self.actions.index(a)
+                tmpstr += a + self.RewStates[toState].state + "Q:" + str(round(self.Q[i][aIdx],4)) + "|"
             f.write(tmpstr + "\n")    
 
     def printSequence(self,textfile,xwr):
         f = open(textfile,xwr)
         f.write("Sequences\n")
-        f.write("stateIndex,state,reward,actionIndex\n")
+        f.write("stateIndex|state|reward|actionIndex|   randgreed\n")
         for i in range(len(self.SequenceRewards)):
             s,r,a,ty = self.SequenceRewards[i]
             va = self.RewStates[s].state
-            f.write(str(s) + "," + str(va) + ","+str(r) + ","+str(a) + "," + str(ty) + "\n")         
+            f.write(str(s) + "|" + str(va) + "|" + str(r) + "|" + str(a) + "|" + str(ty) + "\n")         
 
 
