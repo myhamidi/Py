@@ -34,11 +34,11 @@ Env.SetRandomStart()
 while c < runs_train:
     Agt.TakeState(Env.RetState(),Env.RetReward())
     # Env.render(0.01,"InTKinter")   #"InConsole"
+    Rnr.renderArray(Env.RetGridAsArray(),Env.RetState(),50)
     if Env.RetState() == tmpState:
         print("error - No State Change during Test " + tmpState + " " + str(c))
         break
     tmpState = Env.RetState()
-    Rnr.renderArray(Env.RetGridAsArray(),Env.RetState(),50)
     if Env.IsCurrentStateTerminal():
         tmpState = ""; c+=1
         Env.Reset()
@@ -47,8 +47,8 @@ while c < runs_train:
     Env.Next(Agt.NextAction(eps))
 
 ### Print Results
-Agt.printSequence("SeqRews-Grid.csv","w")
-Agt.printQ("Q-TrMa.csv","w")
+Agt.printSequence100("SeqRews-Grid.csv","w")
+Agt.printQ("Q-Grid.csv","w")
 
 
 ### myTracer
