@@ -5,13 +5,15 @@ class clsGrid:
         self.limit_cols = cols
         self.limit_rows = rows
         self.text = text
-        self.TextHeight = 50
+        self.TextHeight = 50; self.H = 50
+        if cols > 20 or rows > 20: self.TextHeight = 20; self.H = 20
+        if cols > 100 or rows > 100: self.H = 15
         self.master = tk.Tk()
-        self.can = tk.Canvas(self.master, width=cols*50, height=self.TextHeight+rows*50)
+        self.can = tk.Canvas(self.master, width=cols*self.H, height=self.TextHeight+rows*self.H)
         self.can.pack()
-        self.element = [[self.can.create_rectangle(50*i, self.TextHeight+50*j, 50*i+50, self.TextHeight+50+50*j, fill="white") for i in range(cols)] for j in range(rows)]
-        self.txt_elements = [[self.can.create_text((25+50*i, self.TextHeight+25+50*j), text=str(i)+str(j)) for i in range(cols)] for j in range(rows)]
-        self.txt_header = self.can.create_text((cols*50/2, self.TextHeight/2), text=self.text)
+        self.element = [[self.can.create_rectangle(self.H*i, self.TextHeight+self.H*j, self.H*i+self.H, self.TextHeight+self.H+self.H*j, fill="white") for i in range(cols)] for j in range(rows)]
+        self.txt_elements = [[self.can.create_text((self.H/2+self.H*i, self.TextHeight+self.H/2+self.H*j), text=str(i)+str(j)) for i in range(cols)] for j in range(rows)]
+        self.txt_header = self.can.create_text((cols*self.H/2, self.TextHeight/2), text=self.text)
         self.TKinterInit = False
 
     def renderArray(self,twodarr,text,tim):
@@ -27,6 +29,8 @@ class clsGrid:
                     self.SetColor((i,j),"#ffffff")
                 if twodarr[i][j] == 1:
                     self.SetColor((i,j),"#3395E4")
+                if twodarr[i][j] == 2:
+                    self.SetColor((i,j),"#000000")
         #Render
         if self.TKinterInit == False:
             self.TKinterInit = True

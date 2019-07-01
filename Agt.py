@@ -23,7 +23,7 @@ class clsAgent:
         self.LastActionInt = 0
         self.Q = []
         #Parameters:
-        self.alpha = .2
+        self.alpha = .1
         self.gamma = 1
         self.rand = list(range(1000))
         random.shuffle(self.rand)
@@ -32,11 +32,12 @@ class clsAgent:
     def PerceiveState(self,strState,reward):
         tr.call("clsAgent.PerceiveState")
         idx = self.pvRetIndex(strState,reward)
+        alpha = max(1/self.RewStates[idx].visited,self.alpha)      # Learning rate adaptation
         if len(self.SequenceRewards) == 0:r=0
         else: _,r,_,_ = self.SequenceRewards[-1]
         self.SequenceRewards.append((idx,round(r+reward,1),self.LastActionInt,self.LastActionType))
         self.pvExtendTransitionMatrix()
-        self.pvUpdateQ(self.alpha,self.gamma)
+        self.pvUpdateQ(alpha,self.gamma)
     
     def TakeState(self,strState,reward):
         idx = self.pvRetIndex(strState,0)
@@ -139,16 +140,21 @@ class clsAgent:
             self.Q[-1].append(0)
     
     def pvUpdateQ(self,alpha, gamma):
-        if len(self.SequenceRewards)<3: return
-        s1,r1,a,ty = self.SequenceRewards[-1]
+        if len(self.SequenceRewards)<3: 
+            return
+        s1,r1,a,_ = self.SequenceRewards[-1]
         s,r,_,_ = self.SequenceRewards[-2]
         r = r1-r
-        if "terminal" in str(self.RewStates[s].state):
-            self.SequenceRewards[-1] = (s1,0,a,ty)
-            return
+        self.ResetRewardAfterTerminal()
         self.Q[s][a] = self.Q[s][a] + alpha*(r +gamma*max(self.Q[s1]) - self.Q[s][a])
 
-    def printQ(self,textfile,xwr):
+    def ResetRewardAfterTerminal(self):
+        s,_,_,_ = self.SequenceRewards[-2]
+        s1,_,a,ty = self.SequenceRewards[-1]
+        if "terminal" in str(self.RewStates[s].state):
+            self.SequenceRewards[-1] = (s1,0,a,ty)
+
+    def printTransitions(self,textfile,xwr):
         f = open(textfile,xwr)
         f.write("Transitions\n")
         f.write("state|visited|q1|q2\n")    
@@ -158,15 +164,38 @@ class clsAgent:
                 a,toState = self.TransitionMatrix[i][j]
                 aIdx = self.actions.index(a)
                 tmpstr += a + self.RewStates[toState].state + "Q:" + str(round(self.Q[i][aIdx],4)) + "|"
-            f.write(tmpstr + "\n")    
+            f.write(tmpstr + "\n")
 
-    def printSequence(self,textfile,xwr):
+    def printQ(self,textfile,xwr):  
         f = open(textfile,xwr)
-        f.write("Sequences\n")
-        f.write("stateIndex|state|reward|actionIndex|   randgreed\n")
+        f.write("Transitions\n")
+        f.write("state|visited|q1|q2\n")
+        for i in range(len(self.TransitionMatrix)):
+            tmpstr = self.RewStates[i].state.replace(",","|") + "|" + str(self.RewStates[i].visited) + "|" 
+            for j in range(len(self.Q[i])):
+                a = self.actions[j]
+                tmpstr += a + "| Q:" + str(round(self.Q[i][j],4)) + "|"
+                # tmpstr += a + self.RewStates[toState].state + "Q:" + str(round(self.Q[i][aIdx],4)) + "|"
+            f.write(tmpstr + "\n")
+
+    def printSequence100(self,textfile,xwr):
+        f = open(textfile,xwr)
+        f.write("Sequences 100\n")
+        f.write("stateIndex|state|reward|actionIndex|greed\n")
+        #Create evenly distributed indices
+        arr = []; arrTerminal = []; c = 0
         for i in range(len(self.SequenceRewards)):
-            s,r,a,ty = self.SequenceRewards[i]
-            va = self.RewStates[s].state
-            f.write(str(s) + "|" + str(va) + "|" + str(r) + "|" + str(a) + "|" + str(ty) + "\n")         
+            s,_,_,_ = self.SequenceRewards[i]
+            if "terminal" in str(self.RewStates[s].state):
+                arrTerminal.append(i)
+        for i in range(100):
+            arr.append(int(i * len(arrTerminal)/99))
+        # for i in range(len(self.SequenceRewards)):
+        for i in range(99):
+            # s,r,a,ty = self.SequenceRewards[arrTerminal[arr[i]]+1]
+            for j in range(arrTerminal[arr[i]+1] - arrTerminal[arr[i]]):
+                    s,r,a,ty = self.SequenceRewards[arrTerminal[arr[i]]+j+1]
+                    va = self.RewStates[s].state
+                    f.write(str(s) + "|" + str(va) + "|" + str(r) + "|" + str(a) + "|" + str(ty) + "\n")         
 
 

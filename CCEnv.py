@@ -6,7 +6,7 @@ BrakeRatio = 1      # Ratio Braking/Gas -> Brake more than Accelerate in random 
 MaxTimeCycles = 100 # after 1 sec
 
 class clsCCEnv:
-    def __init__(self,StartSpeed, StartDistance,BrakeInc,StateReturnOnNextxvat,StateReturnOnDelta):
+    def __init__(self,StartSpeed, StartDistance,MaxSimLength,BrakeInc,StateReturnOnNextxvat,StateReturnOnDelta):
         self.StartV = StartSpeed/3.6
         self.StartX = StartDistance
         self.terminal = ""
@@ -19,8 +19,9 @@ class clsCCEnv:
         self.RetStateStyle = [True,True,True,True] #x,v,a,t
         #tkinter:
         self.SimDauer = 10
-        self.Monitor = Car.CarsMonitor(self.Cars)
-        self.Monitor.setColor(0,"red")
+        self.m_max = MaxSimLength
+        # self.Monitor = Car.CarsMonitor(self.Cars)
+        # self.Monitor.setColor(0,"red")
 
     def setCar0_Accelerations(self,a):
         self.Cars[0].SetPlanA(a)
@@ -49,6 +50,8 @@ class clsCCEnv:
         x,v,a = self.Cars[1].Retxva()
         x = round(x)-0.49 # Set m values to lower bound of round
         v = round(v,1)
+        self.Cars[0].time = round(self.Cars[0].time,1)
+        self.Cars[1].time = round(self.Cars[1].time,1)
         self.Cars[1].Setxva(x, v, a)
 
         return self.Cars[1].Retxva()
@@ -78,7 +81,7 @@ class clsCCEnv:
                 else:
                     return
             if self.StateReturnOnNextxvat == "t":
-                if  tt-t < self.StateReturnOnDelta:
+                if  abs(tt-t) < self.StateReturnOnDelta:
                     self.Cars[0].NextTimeCycle()
                     self.Cars[1].NextTimeCycle()
                 else:
@@ -105,7 +108,7 @@ class clsCCEnv:
     def ReturnReward(self):
         if self.terminal == "Crash":
             dv = self.Cars[0].v-self.Cars[1].v
-            return -1*dv*dv*1000
+            return -1*dv*dv*100
         if self.terminal == "Safe":
             return 10000
         return round(-1*self.Cars[1].a,1)
@@ -117,13 +120,13 @@ class clsCCEnv:
         self.Cars[1].time = 0
         self.terminal = ""
 
-    def MonitorStart(self):
-        self.Monitor.show(1000)
+    # def MonitorStart(self):
+    #     self.Monitor.show(1000)
 
-    def MonitorUpdate(self):
-        self.Monitor.update(self.Cars)
-        self.Monitor.show(int(100*Car.pbTimeStep))
-        # self.Monitor.show(int(tim*1000*Car.pbTimeStep))
+    # def MonitorUpdate(self):
+    #     self.Monitor.update(self.Cars)
+    #     self.Monitor.show(int(100*Car.pbTimeStep))
+    #     # self.Monitor.show(int(tim*1000*Car.pbTimeStep))
 
     def pvRetDisance(self):
         x0,_,_ = self.Cars[0].Retxva()
@@ -152,6 +155,16 @@ class clsCCEnv:
             String += " "
         print(repr(String), end ='\r')
             
-
+    def RetGridAsArray(self):
+        arr = []
+        arrRow = []
+        flag1= True; flag2 = True
+        for i in range(self.m_max):    #1m = textsign
+            a = 0
+            if self.Cars[0].x < i and flag1:flag1 = False;a = 1
+            if self.Cars[1].x < i and flag2:flag2 = False;a = 2
+            arrRow.append(a)
+        arr.append(arrRow)
+        return arr
 
 
