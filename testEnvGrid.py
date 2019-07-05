@@ -34,7 +34,7 @@ while c < runs_train:
     Agt.TakeState(Env.RetState(),Env.RetReward())
     # Env.render(0.01,"InTKinter")   #"InConsole"
     Rnr.renderArray(Env.RetGridAsArray(),Env.RetState(),50)
-    assert Env.RetState() == tmpState,"No State Change during Test. State is: " + tmpState 
+    assert not Env.RetState() == tmpState,"No State Change during Test. State is: " + tmpState 
     tmpState = Env.RetState()
     if Env.IsCurrentStateTerminal():
         tmpState = ""; c+=1
