@@ -10,7 +10,7 @@ M_MAX = 120
 
 ### Init Environment and Agent
 Env = CCEnv.clsCCEnv(StartSpeed,StartSpeed /3, M_MAX, BrakeInc,"t",0.10)
-Env.InitRetStateStyle([True,True,False,True])
+Env.InitRetStateStyle([True,False,False,True])
 Agt = Agt.clsAgent(Env.ReturnActionList())
 Rnr = Render.clsGrid(1,M_MAX,"")
 # Env.MonitorStart()
@@ -22,35 +22,21 @@ Env.setCar1_Accelerations([(0.01,a)])
 
 ### Train
 m = ""
-c=0; runs_train = 3000
+c=0; runs_train = 50000
 while c < runs_train:
     if Env.Cars[1].v > 1:
         Agt.PerceiveState(Env.RetState(),Env.ReturnReward())
     if "terminal" in str(Env.RetState()):
         c+=1
-        # Agt.PerceiveState(Env.RetState(),Env.ReturnReward())
         Env.Reset()
     eps = 1-c/runs_train
     Env.Next(Agt.NextAction(eps),m)
     if c%100 == 0: print(c, end ='\r')
 
-    # if Env.Cars[1].v > 1:
-    #     Agt.PerceiveState(Env.RetState(),Env.ReturnReward())
-    #     Env.Next(Agt.NextAction(eps),m)
-    # else:
-    #     Env.Next("", m)
-    # if "terminal" in str(Env.RetState()):
-    #     c+=1
-    #     Agt.PerceiveState(Env.RetState(),Env.ReturnReward())
-    #     Env.Reset()
-    #     #Agt.SequenceRewardsReset()
-    #     a = -7 #-8*random.random()
-    #     Env.setCar1_Accelerations([(0.01,a)])
-
 
 ### Test
-m = "monitor"; runs_test = 3; c = 0
-acc = -3-c
+m = "monitor"; runs_test = 1; c = 0
+acc = -6
 Env.setCar1_Accelerations([(0.01,acc)])
 while c < runs_test:
     Agt.TakeState(Env.RetState(),Env.ReturnReward())
