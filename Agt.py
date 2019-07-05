@@ -16,6 +16,7 @@ class clsAgent:
         tr.call("clsAgent.init")
         self.RewStates = []         #Typ: typRewState. Remembers all (unique) states visited.
         self.SequenceRewards = []   #Typ: (s,r,a,actionType). Remembers state (idx), reward and action
+        self.SequenceRewardsTest = []   #Typ: (s,r,a,actionType). Remembers state (idx), reward and action
         self.TransitionMatrix = []  #Typ: List of Lists of tuples[[],[],...]
         self.actions = actionlist
         self.LastAction = ""
@@ -41,9 +42,19 @@ class clsAgent:
     
     def TakeState(self,strState,reward):
         idx = self.pvRetIndex(strState,0)
+        #standard Sequence
         if len(self.SequenceRewards) == 0:r=0
         else: _,r,_,_ = self.SequenceRewards[-1]
         self.SequenceRewards.append((idx,round(r+reward,1),self.LastActionInt,self.LastActionType))
+        #test Sequence
+        if len(self.SequenceRewardsTest) == 0:r=0
+        else: _,r,_,_ = self.SequenceRewardsTest[-1]
+        self.SequenceRewardsTest.append((idx,round(r+reward,1),self.LastActionInt,self.LastActionType))
+        #Reset reward ->0 after terminal state
+        if len(self.SequenceRewardsTest) >1:
+            s1,_,_,_ = self.SequenceRewardsTest[-1]; s2,_,_,_ = self.SequenceRewardsTest[-2]
+            if "terminal" in str(self.RewStates[s2].state) and not "terminal" in str(self.RewStates[s1].state):
+                s1,_,a,ty = self.SequenceRewardsTest[-1]; self.SequenceRewardsTest[-1] = (s1,0,a,ty)
 
     def NextAction(self,epsilon):
         # Get Next Random Number from list
@@ -71,8 +82,11 @@ class clsAgent:
         #Return
         return ""
 
-    def RetTotalReward(self):
-        _,r,_,_ = self.SequenceRewards[-1]
+    def RetRewardCurrentState(self):
+        if len(self.SequenceRewardsTest) == 0:
+            _,r,_,_ = self.SequenceRewards[-1]
+        else:
+            _,r,_,_ = self.SequenceRewardsTest[-1]
         return r
     
     def SequenceRewardsReset(self):
@@ -142,8 +156,8 @@ class clsAgent:
         if len(self.SequenceRewards)<3: 
             return
         s1,r1,a,ty = self.SequenceRewards[-1]
-        s,r,_,_ = self.SequenceRewards[-2]
-        r = r1-r
+        s,r2,_,_ = self.SequenceRewards[-2]
+        r = r1-r2
         if not "terminal" in str(self.RewStates[s].state):
             self.Q[s][a] = self.Q[s][a] + alpha*(r +gamma*max(self.Q[s1]) - self.Q[s][a])
         else:
@@ -177,7 +191,7 @@ class clsAgent:
         f.write("Sequences 100\n")
         f.write("stateIndex|state|reward|actionIndex|greed\n")
         #Create evenly distributed indices
-        arr = []; arrTerminal = []; c = 0
+        arr = []; arrTerminal = []
         for i in range(len(self.SequenceRewards)):
             s,_,_,_ = self.SequenceRewards[i]
             if "terminal" in str(self.RewStates[s].state):
@@ -190,4 +204,11 @@ class clsAgent:
                     va = self.RewStates[s].state
                     f.write(str(s) + "|" + str(va) + "|" + str(r) + "|" + str(a) + "|" + str(ty) + "\n")         
 
-
+    def printSequenceTest(self,textfile,xwr):
+        f = open(textfile,xwr)
+        f.write("Sequences Test\n")
+        f.write("stateIndex|state|reward|actionIndex|greed\n")
+        for i in range(len(self.SequenceRewardsTest)):
+            s,r,a,ty = self.SequenceRewardsTest[i]
+            va = self.RewStates[s].state
+            f.write(str(s) + "|" + str(va) + "|" + str(r) + "|" + str(a) + "|" + str(ty) + "\n")  

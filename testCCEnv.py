@@ -17,30 +17,39 @@ Rnr = Render.clsGrid(1,M_MAX,"")
 
 ### Config
 Env.setCar0_Accelerations([(1.5,-6)])
+a = -6 #-8*random.random()
+Env.setCar1_Accelerations([(0.01,a)])
 
 ### Train
-m = ""; runs_train = 50000; c=0
-a = -8*random.random()
-Env.setCar1_Accelerations([(0.01,a)])
+m = ""
+c=0; runs_train = 3000
 while c < runs_train:
-    eps = 1-c/runs_train
     if Env.Cars[1].v > 1:
         Agt.PerceiveState(Env.RetState(),Env.ReturnReward())
-        Env.Next(Agt.NextAction(eps),m)
-    else:
-        Env.Next("", m)
     if "terminal" in str(Env.RetState()):
         c+=1
-        Agt.PerceiveState(Env.RetState(),Env.ReturnReward())
+        # Agt.PerceiveState(Env.RetState(),Env.ReturnReward())
         Env.Reset()
-        #Agt.SequenceRewardsReset()
-        a = -7 #-8*random.random()
-        Env.setCar1_Accelerations([(0.01,a)])
-        if c%100 == 0: 
-            print(c, end ='\r')
+    eps = 1-c/runs_train
+    Env.Next(Agt.NextAction(eps),m)
+    if c%100 == 0: print(c, end ='\r')
+
+    # if Env.Cars[1].v > 1:
+    #     Agt.PerceiveState(Env.RetState(),Env.ReturnReward())
+    #     Env.Next(Agt.NextAction(eps),m)
+    # else:
+    #     Env.Next("", m)
+    # if "terminal" in str(Env.RetState()):
+    #     c+=1
+    #     Agt.PerceiveState(Env.RetState(),Env.ReturnReward())
+    #     Env.Reset()
+    #     #Agt.SequenceRewardsReset()
+    #     a = -7 #-8*random.random()
+    #     Env.setCar1_Accelerations([(0.01,a)])
+
 
 ### Test
-m = "monitor"; runs_test = 1; c = 0
+m = "monitor"; runs_test = 3; c = 0
 acc = -3-c
 Env.setCar1_Accelerations([(0.01,acc)])
 while c < runs_test:
@@ -50,12 +59,13 @@ while c < runs_test:
     if "terminal" in str(Env.RetState()):
         Agt.TakeState(Env.RetState(),Env.ReturnReward())
         print(str(round(acc,1)) + ")   v0: " + str(round(Env.Cars[0].v,2))+"  v1: " + 
-        str(round(Env.Cars[1].v,2))+".Reward: "+str(round(Agt.RetTotalReward())))
+        str(round(Env.Cars[1].v,2))+".Reward: "+ str(round(Agt.RetRewardCurrentState())))
         Env.Reset()
         c+=1; acc = -3-c
         Env.setCar1_Accelerations([(0.01,acc)])
-    Agt.ResetRewardAfterTerminal() 
+    # Agt.ResetRewardAfterTerminal()
 
 ### Print Sequences of Run
 Agt.printSequence100("SeqRews.csv","w")
+Agt.printSequenceTest("SeqTest.csv","w")
 Agt.printQ("Q.csv","w")
