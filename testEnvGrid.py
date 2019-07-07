@@ -13,25 +13,26 @@ Rnr = Render.clsGrid(GZx,GZy,"")
 
 ### Config
 Env.SetTerminalState((0,0)); Env.SetRewardAtState((0,0),0)
-Env.SetTerminalState((GZx-1,GZy-1)); Env.SetRewardAtState((GZx-1,GZy-1),0)
+# Env.SetTerminalState((GZx-1,GZy-1)); Env.SetRewardAtState((GZx-1,GZy-1),0)
 Env.SetStartPosition((int(GZx/2),int(GZy/2)))
+Agt.setLearningParameter(0.2,1)
 
 ### Train
 c = 0; runs_train = 3000
 while c < runs_train:
-    Agt.PerceiveState(Env.RetState(),Env.RetReward())
+    Agt.perceiveState(Env.RetStateFeatures(),Env.RetState(),Env.RetReward())
     if Env.IsCurrentStateTerminal():
         c+=1
         Env.Reset()
     eps = 1-c/runs_train
-    Env.Next(Agt.NextAction(eps))
+    Env.Next(Agt.nextAction(eps))
     if c%100 == 0:print("Train Step: " + str(c),end ='\r')
 
 ### Test
-tmpState = ""; c = 0; runs_train = 10 #2*(GZ-1)
+tmpState = ""; c = 0; runs_test = 2 #2*(GZ-1)
 Env.SetRandomStart()
-while c < runs_train:
-    Agt.TakeState(Env.RetState(),Env.RetReward())
+while c < runs_test:
+    Agt.getState(Env.RetState(),Env.RetReward())
     # Env.render(0.01,"InTKinter")   #"InConsole"
     Rnr.renderArray(Env.RetGridAsArray(),Env.RetState(),50)
     assert not Env.RetState() == tmpState,"No State Change during Test. State is: " + tmpState 
@@ -41,12 +42,13 @@ while c < runs_train:
         Env.Reset()
         Env.SetRandomStart()
     eps = 0
-    Env.Next(Agt.NextAction(eps))
+    Env.Next(Agt.nextAction(eps))
 
 ### Print Results
-Agt.printSequence100("SeqRews-Grid.csv","w")
-Agt.printQ("Q-Grid.csv","w")
+# Agt.printSequence100("SeqRews-Grid.csv","w")
+# Agt.printQ("Q-Grid.csv","w")
+Agt.printQwithFeatures("Features-x.csv","Feature-Q.csv","w")
 
 
 ### myTracer
-# arr = EnvGrid.tr.getCalls();# print(*arr, sep="\n")
+# arr = EnvGrid.tr.getCalls(); print(*arr, sep="\n")

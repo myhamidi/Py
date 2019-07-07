@@ -13,35 +13,55 @@ class typRewState:
 class clsAgent:
 #Public:
     def __init__(self,actionlist):
-        tr.call("clsAgent.init")
+        tr.call("clsAgent.__init__")
         self.RewStates = []         #Typ: typRewState. Remembers all (unique) states visited.
         self.SequenceRewards = []   #Typ: (s,r,a,actionType). Remembers state (idx), reward and action
+        self.SequenceFeatures = []   #Typ: (s,r,a,actionType). Remembers state (idx), reward and action
         self.SequenceRewardsTest = []   #Typ: (s,r,a,actionType). Remembers state (idx), reward and action
         self.TransitionMatrix = []  #Typ: List of Lists of tuples[[],[],...]
         self.actions = actionlist
         self.LastAction = ""
         self.LastActionType = "" #g,r (greedy, random)
         self.LastActionInt = 0
-        self.Q = []
-        #Parameters:
+        self.Q = []                 #Type: Table of RewStates rows x action cols
+        self.FeatureStates= []      #Typ: List of state representation by Features.List of Lists [[],[],...]. Matchin index of self.RewStates
+        self.FeatureStatesAndActions = []          #Typ: List of FeatureStatesAndActions represenation by features. Len = rows x cols from Q table.Lists [[],[],...]
+        self.FeatureQ = []          #Typ: single col /List of Q valuse for featureStatesAndActions
+
         self.alpha = .2
         self.gamma = 1
         self.rand = list(range(1000))
         random.shuffle(self.rand)
         self.randIdx = 0
 
-    def PerceiveState(self,strState,reward):
-        tr.call("clsAgent.PerceiveState")
-        idx = self.pvRetIndex(strState,reward)
+    def perceiveState(self,featState,strState,reward):
+        tr.call("clsAgent.perceiveState")
+        idx = self.pvRetIndex(strState,reward,featState)
         alpha = max(1/self.RewStates[idx].visited,self.alpha)      # Learning rate adaptation
         if len(self.SequenceRewards) == 0:r=0
         else: _,r,_,_ = self.SequenceRewards[-1]
+        self.SequenceFeatures.append(featState)
         self.SequenceRewards.append((idx,round(r+reward,1),self.LastActionInt,self.LastActionType))
         self.pvExtendTransitionMatrix()
         self.pvUpdateQ(alpha,self.gamma)
     
-    def TakeState(self,strState,reward):
-        idx = self.pvRetIndex(strState,0)
+    def MergeStateFeaturesAndQ(self):
+        for i in range(len(self.FeatureStates)):
+            for j in range(len(self.Q[i])):
+                arr = []
+                for k in range(len(self.FeatureStates[i])):
+                    arr.append(self.FeatureStates[i][k])
+                for k in range(len(self.actions)):
+                    if k == j:
+                        arr.append(1)
+                    else:
+                        arr.append(0)
+                self.FeatureStatesAndActions.append(arr)
+                self.FeatureQ.append(self.Q[i][j])
+
+    def getState(self,strState,reward):
+        tr.call("clsAgent.takeState")
+        idx = self.pvRetIndex(strState,0,[])
         #standard Sequence
         if len(self.SequenceRewards) == 0:r=0
         else: _,r,_,_ = self.SequenceRewards[-1]
@@ -56,18 +76,20 @@ class clsAgent:
             if "terminal" in str(self.RewStates[s2].state) and not "terminal" in str(self.RewStates[s1].state):
                 s1,_,a,ty = self.SequenceRewardsTest[-1]; self.SequenceRewardsTest[-1] = (s1,0,a,ty)
 
-    def NextAction(self,epsilon):
+    def nextAction(self,epsilon):
+        tr.call("clsAgent.nextAction")
         # Get Next Random Number from list
         self.randIdx +=1
         if self.randIdx == 1000: self.randIdx = 0
         rand = self.rand[self.randIdx]/1000
 
         if rand < epsilon:
-            return self.RetNextAction("random")
+            return self.retNextAction("random")
         else:
-            return self.RetNextAction("greedy")
+            return self.retNextAction("greedy")
     
-    def RetNextAction(self,policy):
+    def retNextAction(self,policy):
+        tr.call("clsAgent.retNextAction")
         if policy == "random":
             self.LastAction = random.choice(self.actions)
             self.LastActionInt =self.actions.index(self.LastAction)
@@ -81,59 +103,35 @@ class clsAgent:
             return self.LastAction
         #Return
         return ""
-
-    def RetRewardCurrentState(self):
-        if len(self.SequenceRewardsTest) == 0:
-            _,r,_,_ = self.SequenceRewards[-1]
-        else:
-            _,r,_,_ = self.SequenceRewardsTest[-1]
-        return r
     
-    def SequenceRewardsReset(self):
+    def resetSequenceRewards(self):
+        tr.call("clsAgent.resetSequenceRewards")
         self.SequenceRewards = []
 
-    def IntiSequences(self):
-        self.SequenceRewards =[]
+    def resetSequenceRewardsTest(self):
+        tr.call("clsAgent.resetSequenceRewardsTest")
+        self.SequenceRewardsTest = []
     
-    def InitQ(self,alpha, gamma):
+    def setLearningParameter(self,alpha, gamma):
+        tr.call("clsAgent.setLearningParameter")
         self.alpha = alpha
         self.gamma = gamma
-    
-    def DoBellman(self,iterations):
-        tmpVF = [self.RewStates[i].value for i in range(len(self.RewStates))]
-        for _ in range(iterations):
-            for i in range(len(self.TransitionMatrix)):
-                tmpVF[i] = self.RewStates[i].reward
-                n = len(self.TransitionMatrix[i])
-                for j in range(n):
-                    _,idx = self.TransitionMatrix[i][j]
-                    tmpVF[i] = tmpVF[i] + self.RewStates[idx].value/n
-            
-            for i in range(len(self.RewStates)):
-                self.RewStates[i].value = round(tmpVF[i],4)
-    
-    def Update_ValueFunctionMC(self):
-        _,rsum,_,_ = self.SequenceRewards[-1]
-        for i in range(len(self.SequenceRewards)):
-            idx,rx,_,_ = self.SequenceRewards[i]
-            self.RewStates[idx].visited += 1
-            self.RewStates[idx].value += (rsum-rx-self.RewStates[idx].value)/self.RewStates[idx].visited
-
-
 
 #Private:
-    def pvAppendNewState(self,RewardState):
+    def pvAppendNewState(self,RewardState,featureState):
+        tr.call("clsAgent.pvAppendNewState")
         self.RewStates.append(RewardState)
+        self.FeatureStates.append(featureState)
         self.TransitionMatrix.append([])
         self.pvExtendQ()
 
-    def pvRetIndex(self,strState,reward):
+    def pvRetIndex(self,strState,reward,featureState):
         tr.call("clsAgent.pvRetIndex")
         for i in range(len(self.RewStates)):
             if strState == self.RewStates[i].state:
                 self.RewStates[i].visited +=1
                 return i
-        self.pvAppendNewState(typRewState(strState,reward,0,0))
+        self.pvAppendNewState(typRewState(strState,reward,0,0),featureState)
         i = len(self.RewStates) - 1
         self.RewStates[i].visited +=1
         return i 
@@ -148,11 +146,13 @@ class clsAgent:
                 self.TransitionMatrix[FromIdx].sort()
 
     def pvExtendQ(self):
+        tr.call("clsAgent.pvExtendQ")
         self.Q.append([])
         for  _ in range(len(self.actions)):
             self.Q[-1].append(0)
     
     def pvUpdateQ(self,alpha, gamma):
+        tr.call("clsAgent.pvUpdateQ")
         if len(self.SequenceRewards)<3: 
             return
         s1,r1,a,ty = self.SequenceRewards[-1]
@@ -163,7 +163,16 @@ class clsAgent:
         else:
             self.SequenceRewards[-1] = (s1,0,a,ty)
 
+    def pvExtendFeatureStates(self):
+        if len (self.SequenceRewards)>1: #start from 2nd step
+            FromIdx,_,_,_ = self.SequenceRewards[-2]
+            ToIdx,_,_,_ = self.SequenceRewards[-1]
+            if not (self.LastAction,ToIdx) in self.TransitionMatrix[FromIdx]:
+                self.TransitionMatrix[FromIdx].append((self.LastAction,ToIdx))
+                self.TransitionMatrix[FromIdx].sort()
+
     def printTransitions(self,textfile,xwr):
+        tr.call("clsAgent.printTransitions")
         f = open(textfile,xwr)
         f.write("Transitions\n")
         f.write("state|visited|q1|q2\n")    
@@ -176,20 +185,22 @@ class clsAgent:
             f.write(tmpstr + "\n")
 
     def printQ(self,textfile,xwr):  
+        tr.call("clsAgent.printQ")
         f = open(textfile,xwr)
         f.write("Q\n")
         f.write("state|visited|q1|q2\n")
         for i in range(len(self.TransitionMatrix)):
-            tmpstr = self.RewStates[i].state.replace(",","|") + "|" + str(self.RewStates[i].visited) + "|" 
+            tmpstr = self.RewStates[i].state.replace(",","|") + "|" + str(self.RewStates[i].visited) + " |" 
             for j in range(len(self.Q[i])):
                 a = self.actions[j]
                 tmpstr += a + "| Q:" + str(round(self.Q[i][j],4)) + "|"
             f.write(tmpstr + "\n")
 
     def printSequence100(self,textfile,xwr):
+        tr.call("clsAgent.printSequence100")
         f = open(textfile,xwr)
         f.write("Sequences 100\n")
-        f.write("stateIndex|state|reward|actionIndex|greed\n")
+        f.write("stateIndex|stateFeatures|state|reward|actionIndex|greed\n")
         #Create evenly distributed indices
         arr = []; arrTerminal = []
         for i in range(len(self.SequenceRewards)):
@@ -201,14 +212,33 @@ class clsAgent:
         for i in range(99):
             for j in range(arrTerminal[arr[i]+1] - arrTerminal[arr[i]]):
                     s,r,a,ty = self.SequenceRewards[arrTerminal[arr[i]]+j+1]
+                    feat = self.SequenceFeatures[arrTerminal[arr[i]]+j+1]
                     va = self.RewStates[s].state
-                    f.write(str(s) + "|" + str(va) + "|" + str(r) + "|" + str(a) + "|" + str(ty) + "\n")         
+                    f.write(str(s) + "|" + str(feat) + "|" + str(va) + "|" + str(r) + "|" + str(a) + "|" + str(ty) + "\n")         
 
     def printSequenceTest(self,textfile,xwr):
+        tr.call("clsAgent.printSequenceTest")
         f = open(textfile,xwr)
-        f.write("Sequences Test\n")
+        
         f.write("stateIndex|state|reward|actionIndex|greed\n")
         for i in range(len(self.SequenceRewardsTest)):
             s,r,a,ty = self.SequenceRewardsTest[i]
             va = self.RewStates[s].state
             f.write(str(s) + "|" + str(va) + "|" + str(r) + "|" + str(a) + "|" + str(ty) + "\n")  
+
+    def printQwithFeatures(self,Featurefile,Qfile,xwr):
+        self.MergeStateFeaturesAndQ()
+        f = open(Featurefile,xwr)
+        f.write("Features\n")
+        for i in range(len(self.FeatureStatesAndActions)):
+            for j in range(len(self.FeatureStatesAndActions[i])):
+                f.write(str(self.FeatureStatesAndActions[i][j]))
+                if not j == len(self.FeatureStatesAndActions[i])-1:
+                    f.write("|")
+            f.write("\n")
+        
+        fq = open(Qfile,xwr)
+        fq.write("Features\n")
+        for i in range(len(self.FeatureQ)):
+            fq.write(str(round(self.FeatureQ[i],4)))
+            fq.write("\n")

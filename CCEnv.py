@@ -104,6 +104,16 @@ class clsCCEnv:
             self.terminal = "Safe"
             Ret = "terminalSafe"
         return Ret
+
+    def RetStateFeatures(self):
+        x,v,a = self.Cars[1].Retxva()
+        t = self.Cars[1].time
+        if self.RetStateStyle[0] == False: x=0
+        if self.RetStateStyle[1] == False: v=0
+        if self.RetStateStyle[2] == False: a=0
+        if self.RetStateStyle[3] == False: t=0
+        
+        return [x,v,a,t]
     
     def ReturnReward(self):
         if self.terminal == "Crash":

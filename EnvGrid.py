@@ -66,6 +66,15 @@ class clsEnvironment:
             return str(self.currentposition) + "terminal1"
         return str(self.currentposition)
 
+    def RetStateFeatures(self):
+        tr.call("clsEnv.RetStateFeatures")
+        t = 0
+        if self.IsCurrentStateTerminal() == True:
+            self.run += 1
+            t = 1
+        x,y = self.currentposition
+        return [x,y]
+
     def RetGridAsArray(self):
         tr.call("clsEnv.RetGridAsArray")
         arr = []
