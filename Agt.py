@@ -3,9 +3,10 @@ import myTracer;tr = myTracer.glTracer
 import random
 
 class typRewState:
-    def __init__(self,stateStr,reward,value,visited):
+    def __init__(self,stateStr,statefeat,reward,value,visited):
         tr.call("typRewState.init")
         self.state = stateStr
+        self.features = statefeat
         self.reward = reward
         self.value = value
         self.visited = visited
@@ -63,9 +64,9 @@ class clsAgent:
                 self.FeatureStatesAndActions.append(arr)
                 self.FeatureQ.append(self.Q[i][j])
 
-    def getState(self,strState,reward):
+    def getState(self,strState,reward,featState):
         tr.call("clsAgent.takeState")
-        idx = self.pvRetIndex(strState,0,[])
+        idx = self.pvRetIndex(strState,0,featState)
         #standard Sequence
         if len(self.SequenceRewards) == 0:r=0
         else: _,r,_,_ = self.SequenceRewards[-1]
@@ -132,10 +133,13 @@ class clsAgent:
     def pvRetIndex(self,strState,reward,featureState):
         tr.call("clsAgent.pvRetIndex")
         for i in range(len(self.RewStates)):
-            if strState == self.RewStates[i].state:
+            if featureState == self.RewStates[i].features:
                 self.RewStates[i].visited +=1
                 return i
-        self.pvAppendNewState(typRewState(strState,reward,0,0),featureState)
+            # if strState == self.RewStates[i].state:
+            #     self.RewStates[i].visited +=1
+            #     return i    
+        self.pvAppendNewState(typRewState(strState,featureState,reward,0,0),featureState)
         i = len(self.RewStates) - 1
         self.RewStates[i].visited +=1
         return i 

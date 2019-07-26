@@ -29,23 +29,24 @@ while c < runs_train:
     if c%100 == 0:print("Train Step: " + str(c),end ='\r')
 
 ### Test
-tmpState = ""; c = 0; runs_test = 2 #2*(GZ-1)
+tmpState = ""; c = 0; runs_test = 10;imax = 20;i=0 #2*(GZ-1);
 Env.SetRandomStart()
-while c < runs_test:
-    Agt.getState(Env.RetState(),Env.RetReward())
+while c < runs_test and i < imax:
+    Agt.getState(Env.RetState(),Env.RetReward(),Env.RetStateFeatures())
     # Env.render(0.01,"InTKinter")   #"InConsole"
     Rnr.renderArray(Env.RetGridAsArray(),Env.RetState(),50)
     assert not Env.RetState() == tmpState,"No State Change during Test. State is: " + tmpState 
+    i +=1
     tmpState = Env.RetState()
     if Env.IsCurrentStateTerminal():
-        tmpState = ""; c+=1
+        tmpState = ""; c+=1;i=0
         Env.Reset()
         Env.SetRandomStart()
     eps = 0
     Env.Next(Agt.nextAction(eps))
 
 ### Print Results
-# Agt.printSequence100("SeqRews-Grid.csv","w")
+Agt.printSequence100("SeqRews-Grid.csv","w")
 # Agt.printQ("Q-Grid.csv","w")
 Agt.printQwithFeatures("Features-x.csv","Feature-Q.csv","w")
 
