@@ -15,6 +15,7 @@ class clsAgent:
     def __init__(self,actionlist):
         tr.call("clsAgent.__init__")
         self.RewStates = []         #Typ: typRewState. Remembers all (unique) states visited.
+        self.Sequence = []
         self.SequenceRewards = []   #Typ: (s,r,a,actionType). Remembers state (idx), reward and action
         self.SequenceFeatures = []   #Typ: (s,r,a,actionType). Remembers state (idx), reward and action
         self.SequenceRewardsTest = []   #Typ: (s,r,a,actionType). Remembers state (idx), reward and action
@@ -38,12 +39,15 @@ class clsAgent:
         tr.call("clsAgent.perceiveState")
         idx = self.pvRetIndex(strState,reward,featState)
         alpha = max(1/self.RewStates[idx].visited,self.alpha)      # Learning rate adaptation
+        self.pvExtendSequence(idx, featState,reward)
+        self.pvExtendTransitionMatrix()
+        self.pvUpdateQ(alpha,self.gamma)
+
+    def pvExtendSequence(self,idx, featState,reward):
         if len(self.SequenceRewards) == 0:r=0
         else: _,r,_,_ = self.SequenceRewards[-1]
         self.SequenceFeatures.append(featState)
         self.SequenceRewards.append((idx,round(r+reward,1),self.LastActionInt,self.LastActionType))
-        self.pvExtendTransitionMatrix()
-        self.pvUpdateQ(alpha,self.gamma)
     
     def MergeStateFeaturesAndQ(self):
         for i in range(len(self.FeatureStates)):
