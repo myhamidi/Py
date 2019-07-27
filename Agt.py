@@ -40,22 +40,29 @@ class clsAgent:
     def perceiveState(self,featState,strState,reward):
         tr.call("clsAgent.perceiveState")
         idx = self.pvRetIndex(strState,reward,featState)
-        alpha = max(1/self.RewStates[idx].visited,self.alpha)      # Learning rate adaptation
         self.pvExtendSequence(idx, featState, reward)
         self.pvExtendTransitionMatrix()
-        self.pvUpdateQ(alpha,self.gamma)
+        self.pvUpdateQ(self.RewStates[idx].visited, self.alpha, self.gamma)
 
     def getState(self,strState,reward,featState):
         tr.call("clsAgent.takeState")
         idx = self.pvRetIndex(strState,0,featState)
-        # self.pvExtendSequence(idx, featState, reward)
-        #test Sequence
         self.pvExtendSequenceTest(idx, featState, reward)
-        #Reset reward ->0 after terminal state
-        if len(self.SequenceRewardsTest) >1:
-            s1,_,_,_ = self.SequenceRewardsTest[-1]; s2,_,_,_ = self.SequenceRewardsTest[-2]
-            if "terminal" in str(self.RewStates[s2].state) and not "terminal" in str(self.RewStates[s1].state):
-                s1,_,a,ty = self.SequenceRewardsTest[-1]; self.SequenceRewardsTest[-1] = (s1,0,a,ty)
+        self.pvSequenceTest_ResetRewardOnTerminal()
+
+    def nextAction(self,epsilon):
+        tr.call("clsAgent.nextAction")
+        rand = self.pvNextRandInt()
+        if rand < epsilon: #Random
+            self.LastActionType = "r"
+            self.LastAction = random.choice(self.actions)
+            self.LastActionInt =self.actions.index(self.LastAction)
+        else: #Greedy
+            self.LastActionType = "g"
+            s,_,_,_ = self.lastSeqStep      
+            self.LastActionInt = self.Q[s].index(max(self.Q[s]))
+            self.LastAction = self.actions[self.LastActionInt]     
+        return self.LastAction
     
     def MergeStateFeaturesAndQ(self):
         for i in range(len(self.FeatureStates)):
@@ -70,34 +77,6 @@ class clsAgent:
                         arr.append(0)
                 self.FeatureStatesAndActions.append(arr)
                 self.FeatureQ.append(self.Q[i][j])
-
-    def nextAction(self,epsilon):
-        tr.call("clsAgent.nextAction")
-        # Get Next Random Number from list
-        self.randIdx +=1
-        if self.randIdx == 1000: self.randIdx = 0
-        rand = self.rand[self.randIdx]/1000
-
-        if rand < epsilon:
-            return self.retNextAction("random")
-        else:
-            return self.retNextAction("greedy")
-    
-    def retNextAction(self,policy):
-        tr.call("clsAgent.retNextAction")
-        if policy == "random":
-            self.LastAction = random.choice(self.actions)
-            self.LastActionInt =self.actions.index(self.LastAction)
-            self.LastActionType = "r"
-            return self.LastAction
-        if policy == "greedy":
-            s,_,_,_ = self.lastSeqStep        
-            self.LastActionInt = self.Q[s].index(max(self.Q[s]))
-            self.LastAction = self.actions[self.LastActionInt]
-            self.LastActionType = "g"
-            return self.LastAction
-        #Return
-        return ""
     
     def resetSequenceRewards(self):
         tr.call("clsAgent.resetSequenceRewards")
@@ -113,6 +92,18 @@ class clsAgent:
         self.gamma = gamma
 
 #Private:
+    def pvNextRandInt(self):
+        # Get Next Random Number from list
+        self.randIdx +=1
+        if self.randIdx == 1000: 
+            self.randIdx = 0
+        return self.rand[self.randIdx]/1000
+
+    def pvSequenceTest_ResetRewardOnTerminal(self):
+        if len(self.SequenceRewardsTest) >1:
+            s1,_,_,_ = self.SequenceRewardsTest[-1]; s2,_,_,_ = self.SequenceRewardsTest[-2]
+            if "terminal" in str(self.RewStates[s2].state) and not "terminal" in str(self.RewStates[s1].state):
+                s1,_,a,ty = self.SequenceRewardsTest[-1]; self.SequenceRewardsTest[-1] = (s1,0,a,ty)
 
     def pvExtendSequence(self,idx, featState,reward):
         if len(self.SequenceRewards) == 0:r=0
@@ -160,8 +151,9 @@ class clsAgent:
         for  _ in range(len(self.actions)):
             self.Q[-1].append(0)
     
-    def pvUpdateQ(self,alpha, gamma):
+    def pvUpdateQ(self, visited, alpha, gamma):
         tr.call("clsAgent.pvUpdateQ")
+        alpha = max(1/visited,self.alpha)
         if len(self.SequenceRewards)<3: 
             return
         s1,r1,a,ty = self.SequenceRewards[-1]
