@@ -45,10 +45,14 @@ while c < runs_test and i < imax:
     eps = 0
     Env.Next(Agt.nextAction(eps))
 
+Agt.RoundQ(2)
+Agt.CreateQListFromQTable()
+
 ### Print Results
-Agt.printSequence100("SeqRews-Grid.csv","w")
-# Agt.printQ("Q-Grid.csv","w")
-Agt.printQwithFeatures("Features-x.csv","Feature-Q.csv","w")
+# Agt.printSequence100("SeqRews-Grid.csv","w")
+Agt.printQTable("Q-Grid.csv","w")
+Agt.printQList("QList-Grid.csv","w")
+# Agt.printQwithFeatures("Features-x.csv","Feature-Q.csv","w")
 
 
 ### myTracer
