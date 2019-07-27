@@ -26,10 +26,10 @@ class clsAgent:
         self.LastAction = ""
         self.LastActionType = "" #g,r (greedy, random)
         self.LastActionInt = 0
-        self.Q = []                 #Type: Table of RewStates rows x action cols
-        self.FeatureStates= []      #Typ: List of state representation by Features.List of Lists [[],[],...]. Matchin index of self.RewStates
-        self.FeatureStatesAndActions = []          #Typ: List of FeatureStatesAndActions represenation by features. Len = rows x cols from Q table.Lists [[],[],...]
-        self.FeatureQ = []          #Typ: single col /List of Q valuse for featureStatesAndActions
+        self.Q = []                 #QTable, Type: Table of RewStates rows x action cols
+        # self.FeatureStates= []      #Typ: List of state representation by Features.List of Lists [[],[],...]. Matchin index of self.RewStates
+        self.QList = []          #Typ: List of QList represenation by features. Len = rows x cols from Q table.Lists [[],[],...]
+        self.FeatureQ = []          #Typ: single col /List of Q valuse for QList
 
         self.alpha = .2
         self.gamma = 1
@@ -63,20 +63,27 @@ class clsAgent:
             self.LastActionInt = self.Q[s].index(max(self.Q[s]))
             self.LastAction = self.actions[self.LastActionInt]     
         return self.LastAction
+
+    def RoundQ(self, numdec):
+        for i in range(len(self.Q)):
+            for j in range(len(self.Q[i])):
+                self.Q[i][j] = round(self.Q[i][j], numdec)
     
-    def MergeStateFeaturesAndQ(self):
-        for i in range(len(self.FeatureStates)):
+    def CreateQListFromQTable(self):
+        assert len(self.RewStates) == len(self.Q), "Length of Agt states != Agt Q rows."
+        self.QList = []
+        for i in range(len(self.RewStates)):
             for j in range(len(self.Q[i])):
                 arr = []
-                for k in range(len(self.FeatureStates[i])):
-                    arr.append(self.FeatureStates[i][k])
+                for k in range(len(self.RewStates[i].features)):
+                    arr.append((self.RewStates[i].features[k]))
                 for k in range(len(self.actions)):
                     if k == j:
                         arr.append(1)
                     else:
                         arr.append(0)
-                self.FeatureStatesAndActions.append(arr)
-                self.FeatureQ.append(self.Q[i][j])
+                arr.append(self.Q[i][j])
+                self.QList.append(arr)
     
     def resetSequenceRewards(self):
         tr.call("clsAgent.resetSequenceRewards")
@@ -121,7 +128,7 @@ class clsAgent:
     def pvAppendNewState(self,RewardState,featureState):
         tr.call("clsAgent.pvAppendNewState")
         self.RewStates.append(RewardState)
-        self.FeatureStates.append(featureState)
+        # self.FeatureStates.append(featureState)
         self.TransitionMatrix.append([])
         self.pvAddQrow()
 
@@ -164,13 +171,13 @@ class clsAgent:
         else:
             self.SequenceRewards[-1] = (s1,0,a,ty)
 
-    def pvExtendFeatureStates(self):
-        if len (self.SequenceRewards)>1: #start from 2nd step
-            FromIdx,_,_,_ = self.SequenceRewards[-2]
-            ToIdx,_,_,_ = self.SequenceRewards[-1]
-            if not (self.LastAction,ToIdx) in self.TransitionMatrix[FromIdx]:
-                self.TransitionMatrix[FromIdx].append((self.LastAction,ToIdx))
-                self.TransitionMatrix[FromIdx].sort()
+    # def pvExtendFeatureStates(self):
+    #     if len (self.SequenceRewards)>1: #start from 2nd step
+    #         FromIdx,_,_,_ = self.SequenceRewards[-2]
+    #         ToIdx,_,_,_ = self.SequenceRewards[-1]
+    #         if not (self.LastAction,ToIdx) in self.TransitionMatrix[FromIdx]:
+    #             self.TransitionMatrix[FromIdx].append((self.LastAction,ToIdx))
+    #             self.TransitionMatrix[FromIdx].sort()
 
     def printTransitions(self,textfile,xwr):
         tr.call("clsAgent.printTransitions")
@@ -183,18 +190,6 @@ class clsAgent:
                 a,toState = self.TransitionMatrix[i][j]
                 aIdx = self.actions.index(a)
                 tmpstr += a + self.RewStates[toState].state + "Q:" + str(round(self.Q[i][aIdx],4)) + "|"
-            f.write(tmpstr + "\n")
-
-    def printQ(self,textfile,xwr):  
-        tr.call("clsAgent.printQ")
-        f = open(textfile,xwr)
-        f.write("Q\n")
-        f.write("state|visited|q1|q2\n")
-        for i in range(len(self.TransitionMatrix)):
-            tmpstr = self.RewStates[i].state.replace(",","|") + "|" + str(self.RewStates[i].visited) + " |" 
-            for j in range(len(self.Q[i])):
-                a = self.actions[j]
-                tmpstr += a + "| Q:" + str(round(self.Q[i][j],4)) + "|"
             f.write(tmpstr + "\n")
 
     def printSequence100(self,textfile,xwr):
@@ -227,19 +222,40 @@ class clsAgent:
             va = self.RewStates[s].state
             f.write(str(s) + "|" + str(va) + "|" + str(r) + "|" + str(a) + "|" + str(ty) + "\n")  
 
-    def printQwithFeatures(self,Featurefile,Qfile,xwr):
-        self.MergeStateFeaturesAndQ()
-        f = open(Featurefile,xwr)
-        f.write("Features\n")
-        for i in range(len(self.FeatureStatesAndActions)):
-            for j in range(len(self.FeatureStatesAndActions[i])):
-                f.write(str(self.FeatureStatesAndActions[i][j]))
-                if not j == len(self.FeatureStatesAndActions[i])-1:
-                    f.write("|")
-            f.write("\n")
-        
-        fq = open(Qfile,xwr)
-        fq.write("Features\n")
-        for i in range(len(self.FeatureQ)):
-            fq.write(str(round(self.FeatureQ[i],4)))
-            fq.write("\n")
+    def printQTable(self,textfile,xwr):  
+        tr.call("clsAgent.printQ")
+        sep = " | "; nfeat = len(self.RewStates[0].features); nactions = len(self.actions)
+        f = open(textfile,xwr)
+        #Header
+        for k in range(nfeat):
+            f.write("feat "+str(k)+sep)    
+        f.write("visited"+sep)
+        for k in range(nactions):
+            f.write(self.actions[k]+sep)
+        f.write("\n") 
+        #Data
+        for i in range(len(self.RewStates)):
+            assert len(self.Q[i]) == nactions, "actions != Q coloums at Q row: " + str(i)
+            tmpstr = ""
+            for j in range(nfeat):
+                tmpstr += str(self.RewStates[i].features[j]) + sep    
+            tmpstr += str(self.RewStates[i].visited) + sep 
+            for j in range(nactions):
+                tmpstr += str(self.Q[i][j]) + sep
+            f.write(tmpstr + "\n")
+
+    def printQList(self,textfile,xwr):
+        tr.call("clsAgent.printQ")
+        sep = " | "; nfeat = len(self.RewStates[0].features); nactions = len(self.actions)
+        f = open(textfile,xwr)
+        #Header
+        for k in range(nfeat):
+            f.write("feat "+str(k)+sep)    
+        for k in range(nactions):
+            f.write(self.actions[k]+sep)
+        f.write("Q"+sep+"\n") 
+        for i in range(len(self.QList)):
+            tmpstr = ""
+            for j in range(len(self.QList[i])):
+                tmpstr += str(self.QList[i][j])+sep
+            f.write(tmpstr + "\n")
