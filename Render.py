@@ -12,7 +12,7 @@ class clsGrid:
         self.can = tk.Canvas(self.master, width=cols*self.H, height=self.TextHeight+rows*self.H)
         self.can.pack()
         self.element = [[self.can.create_rectangle(self.H*i, self.TextHeight+self.H*j, self.H*i+self.H, self.TextHeight+self.H+self.H*j, fill="white") for i in range(cols)] for j in range(rows)]
-        self.txt_elements = [[self.can.create_text((self.H/2+self.H*i, self.TextHeight+self.H/2+self.H*j), text=str(i)+str(j)) for i in range(cols)] for j in range(rows)]
+        self.txt_elements = [[self.can.create_text((self.H/2+self.H*i, self.TextHeight+self.H/2+self.H*j), text=str(j)+str(i)) for i in range(cols)] for j in range(rows)]
         self.txt_header = self.can.create_text((cols*self.H/2, self.TextHeight/2), text=self.text)
         self.TKinterInit = False
 

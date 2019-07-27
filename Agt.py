@@ -21,6 +21,7 @@ class clsAgent:
         self.SequenceFeatures = []   #Typ: (s,r,a,actionType). Remembers state (idx), reward and action
         self.SequenceRewardsTest = []   #Typ: (s,r,a,actionType). Remembers state (idx), reward and action
         self.TransitionMatrix = []  #Typ: List of Lists of tuples[[],[],...]
+        self.lastSeqStep = ()
         self.actions = actionlist
         self.LastAction = ""
         self.LastActionType = "" #g,r (greedy, random)
@@ -40,15 +41,21 @@ class clsAgent:
         tr.call("clsAgent.perceiveState")
         idx = self.pvRetIndex(strState,reward,featState)
         alpha = max(1/self.RewStates[idx].visited,self.alpha)      # Learning rate adaptation
-        self.pvExtendSequence(idx, featState,reward)
+        self.pvExtendSequence(idx, featState, reward)
         self.pvExtendTransitionMatrix()
         self.pvUpdateQ(alpha,self.gamma)
 
-    def pvExtendSequence(self,idx, featState,reward):
-        if len(self.SequenceRewards) == 0:r=0
-        else: _,r,_,_ = self.SequenceRewards[-1]
-        self.SequenceFeatures.append(featState)
-        self.SequenceRewards.append((idx,round(r+reward,1),self.LastActionInt,self.LastActionType))
+    def getState(self,strState,reward,featState):
+        tr.call("clsAgent.takeState")
+        idx = self.pvRetIndex(strState,0,featState)
+        # self.pvExtendSequence(idx, featState, reward)
+        #test Sequence
+        self.pvExtendSequenceTest(idx, featState, reward)
+        #Reset reward ->0 after terminal state
+        if len(self.SequenceRewardsTest) >1:
+            s1,_,_,_ = self.SequenceRewardsTest[-1]; s2,_,_,_ = self.SequenceRewardsTest[-2]
+            if "terminal" in str(self.RewStates[s2].state) and not "terminal" in str(self.RewStates[s1].state):
+                s1,_,a,ty = self.SequenceRewardsTest[-1]; self.SequenceRewardsTest[-1] = (s1,0,a,ty)
     
     def MergeStateFeaturesAndQ(self):
         for i in range(len(self.FeatureStates)):
@@ -63,23 +70,6 @@ class clsAgent:
                         arr.append(0)
                 self.FeatureStatesAndActions.append(arr)
                 self.FeatureQ.append(self.Q[i][j])
-
-    def getState(self,strState,reward,featState):
-        tr.call("clsAgent.takeState")
-        idx = self.pvRetIndex(strState,0,featState)
-        #standard Sequence
-        if len(self.SequenceRewards) == 0:r=0
-        else: _,r,_,_ = self.SequenceRewards[-1]
-        self.SequenceRewards.append((idx,round(r+reward,1),self.LastActionInt,self.LastActionType))
-        #test Sequence
-        if len(self.SequenceRewardsTest) == 0:r=0
-        else: _,r,_,_ = self.SequenceRewardsTest[-1]
-        self.SequenceRewardsTest.append((idx,round(r+reward,1),self.LastActionInt,self.LastActionType))
-        #Reset reward ->0 after terminal state
-        if len(self.SequenceRewardsTest) >1:
-            s1,_,_,_ = self.SequenceRewardsTest[-1]; s2,_,_,_ = self.SequenceRewardsTest[-2]
-            if "terminal" in str(self.RewStates[s2].state) and not "terminal" in str(self.RewStates[s1].state):
-                s1,_,a,ty = self.SequenceRewardsTest[-1]; self.SequenceRewardsTest[-1] = (s1,0,a,ty)
 
     def nextAction(self,epsilon):
         tr.call("clsAgent.nextAction")
@@ -101,7 +91,7 @@ class clsAgent:
             self.LastActionType = "r"
             return self.LastAction
         if policy == "greedy":
-            s,_,_,_ = self.SequenceRewards[-1]        
+            s,_,_,_ = self.lastSeqStep        
             self.LastActionInt = self.Q[s].index(max(self.Q[s]))
             self.LastAction = self.actions[self.LastActionInt]
             self.LastActionType = "g"
@@ -123,22 +113,33 @@ class clsAgent:
         self.gamma = gamma
 
 #Private:
+
+    def pvExtendSequence(self,idx, featState,reward):
+        if len(self.SequenceRewards) == 0:r=0
+        else: _,r,_,_ = self.SequenceRewards[-1]
+        self.SequenceFeatures.append(featState)
+        self.SequenceRewards.append((idx,round(r+reward,1),self.LastActionInt,self.LastActionType))
+        self.lastSeqStep = self.SequenceRewards[-1]
+
+    def pvExtendSequenceTest(self,idx,featState,reward):
+        if len(self.SequenceRewardsTest) == 0:r=0
+        else: _,r,_,_ = self.SequenceRewardsTest[-1]
+        self.SequenceRewardsTest.append((idx,round(r+reward,1),self.LastActionInt,self.LastActionType))
+        self.lastSeqStep = self.SequenceRewardsTest[-1]
+
     def pvAppendNewState(self,RewardState,featureState):
         tr.call("clsAgent.pvAppendNewState")
         self.RewStates.append(RewardState)
         self.FeatureStates.append(featureState)
         self.TransitionMatrix.append([])
-        self.pvExtendQ()
+        self.pvAddQrow()
 
     def pvRetIndex(self,strState,reward,featureState):
         tr.call("clsAgent.pvRetIndex")
         for i in range(len(self.RewStates)):
             if featureState == self.RewStates[i].features:
                 self.RewStates[i].visited +=1
-                return i
-            # if strState == self.RewStates[i].state:
-            #     self.RewStates[i].visited +=1
-            #     return i    
+                return i  
         self.pvAppendNewState(typRewState(strState,featureState,reward,0,0),featureState)
         i = len(self.RewStates) - 1
         self.RewStates[i].visited +=1
@@ -153,8 +154,8 @@ class clsAgent:
                 self.TransitionMatrix[FromIdx].append((self.LastAction,ToIdx))
                 self.TransitionMatrix[FromIdx].sort()
 
-    def pvExtendQ(self):
-        tr.call("clsAgent.pvExtendQ")
+    def pvAddQrow(self):
+        tr.call("clsAgent.pvAddQrow")
         self.Q.append([])
         for  _ in range(len(self.actions)):
             self.Q[-1].append(0)
