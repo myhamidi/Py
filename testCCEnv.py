@@ -33,17 +33,16 @@ while c < runs_train:
     Env.Next(Agt.nextAction(eps),m)
     if c%100 == 0: print(c, end ='\r')
 
-
 ### Test
 m = "monitor"; runs_test = 1; c = 0
 acc = -6
 Env.setCar1_Accelerations([(0.01,acc)])
 while c < runs_test:
-    Agt.getState(Env.RetState(),Env.ReturnReward())
+    Agt.getState(Env.RetStateFeatures(),Env.RetState(), Env.ReturnReward())
     Env.Next(Agt.nextAction(0),m)
     Rnr.renderArray(Env.RetGridAsArray(),Env.RetState(),50)
     if "terminal" in str(Env.RetState()):
-        Agt.getState(Env.RetState(),Env.ReturnReward())
+        Agt.getState(Env.RetStateFeatures(), Env.RetState(),Env.ReturnReward())
         _,r,_,_ = Agt.SequenceRewardsTest[-1]
         print(str(round(acc,1)) + ")   v0: " + str(round(Env.Cars[0].v,2))+"  v1: " + 
         str(round(Env.Cars[1].v,2))+".Reward: "+ str(round(r)))
@@ -52,8 +51,13 @@ while c < runs_test:
         c+=1; acc = -3-c
         Env.setCar1_Accelerations([(0.01,acc)])
 
-### Print Sequences of Run
-Agt.printSequence100("SeqRews.csv","w")
-Agt.printSequenceTest("SeqTest.csv","w")
-Agt.printQ("Q.csv","w")
+Agt.RoundQ(2)
+Agt.CreateQListFromQTable()
 
+Agt.printQTable("Q-CC.csv","w")
+Agt.printQList("QList-CC.csv","w")
+
+### Print Sequences of Run
+# Agt.printSequence100("SeqRews.csv","w")
+Agt.printSequenceTest("SeqTest-CC.csv","w")
+# Agt.printQ("Q.csv","w")
