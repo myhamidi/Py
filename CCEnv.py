@@ -9,7 +9,8 @@ class clsCCEnv:
     def __init__(self,StartSpeed, StartDistance,MaxSimLength,BrakeInc,StateReturnOnNextxvat,StateReturnOnDelta):
         self.StartV = StartSpeed/3.6
         self.StartX = StartDistance
-        self.terminal = ""
+        self.terminal = 0
+        self.terminalStr = ""
         self.Cars = [Car.typCar(0,self.StartV,0),Car.typCar(self.StartX,self.StartV,0)]
         self.Actions = ["brake","releasebrake"]
         self.BrakeInc = BrakeInc
@@ -95,14 +96,12 @@ class clsCCEnv:
         if self.RetStateStyle[1] == True: Ret += str(round(v,1))+ " , "       #  12,1 m/s
         if self.RetStateStyle[2] == True: Ret += str(round(2*a,0)/2)+ " , " #  -2,5m/s^2
         if self.RetStateStyle[3] == True: Ret += str(round(t,1))              #  2.1 s
+        self.SetTerminalStateToSelf()
 
-        if self.pvRetDisance() <= 0:
-            self.terminal = "Crash"
-            Ret = "terminalCrash"
-        _,v0,_ = self.Cars[0].Retxva() 
-        if v0 == 0:
-            self.terminal = "Safe"
-            Ret = "terminalSafe"
+        if self.terminalStr == "Crash":
+            return "terminalCrash"
+        if self.terminalStr == "Safe":
+            return "terminalSafe"
         return Ret
 
     def RetStateFeatures(self):
@@ -112,14 +111,25 @@ class clsCCEnv:
         if self.RetStateStyle[1] == False: v=0
         if self.RetStateStyle[2] == False: a=0
         if self.RetStateStyle[3] == False: t=0
-        
-        return [x,v,a,t]
+        self.SetTerminalStateToSelf()
+        return [x,v,a,t,self.terminal]
+
+    def SetTerminalStateToSelf(self):
+        self.terminal = 0
+        self.terminalStr = ""
+        if self.pvRetDisance() <= 0:
+            self.terminal = 1
+            self.terminalStr = "Crash"
+        _,v0,_ = self.Cars[0].Retxva() 
+        if v0 == 0:
+            self.terminal = 1
+            self.terminalStr = "Safe"
     
     def ReturnReward(self):
-        if self.terminal == "Crash":
+        if self.terminalStr == "Crash":
             dv = self.Cars[0].v-self.Cars[1].v
             return -1*dv*dv*100
-        if self.terminal == "Safe":
+        if self.terminalStr == "Safe":
             return 10000
         return round(-1*self.Cars[1].a,1)
     
@@ -128,7 +138,8 @@ class clsCCEnv:
         self.Cars[1].Setxva(self.StartX,self.StartV,0)
         self.Cars[0].time = 0
         self.Cars[1].time = 0
-        self.terminal = ""
+        self.terminalStr = ""
+        self.terminal = 0
 
     # def MonitorStart(self):
     #     self.Monitor.show(1000)
