@@ -73,7 +73,7 @@ class clsEnvironment:
             self.run += 1
             t = 1
         x,y = self.currentposition
-        return [x,y,t,str(self.currentposition)]
+        return [x,y,t]
 
     def RetGridAsArray(self):
         tr.call("clsEnv.RetGridAsArray")
