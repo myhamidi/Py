@@ -44,7 +44,7 @@ class clsAgent:
         self.pvExtendTransitionMatrix()
         self.pvUpdateQ(self.RewStates[idx].visited, self.alpha, self.gamma)
 
-    def getState(self,strState,reward,featState):
+    def getState(self,featState,strState,reward):
         tr.call("clsAgent.takeState")
         idx = self.pvRetIndex(strState,0,featState)
         self.pvExtendSequenceTest(idx, featState, reward)
@@ -122,7 +122,7 @@ class clsAgent:
     def pvExtendSequenceTest(self,idx,featState,reward):
         if len(self.SequenceRewardsTest) == 0:r=0
         else: _,r,_,_ = self.SequenceRewardsTest[-1]
-        self.SequenceRewardsTest.append((idx,round(r+reward,1),self.LastActionInt,self.LastActionType))
+        self.SequenceRewardsTest.append((idx, round(r+reward,1), self.LastActionInt, self.LastActionType))
         self.lastSeqStep = self.SequenceRewardsTest[-1]
 
     def pvAppendNewState(self,RewardState,featureState):

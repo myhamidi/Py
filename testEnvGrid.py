@@ -32,7 +32,7 @@ while c < runs_train:
 tmpState = ""; c = 0; runs_test = 10;imax = 20;i=0 #2*(GZ-1);
 Env.SetRandomStart()
 while c < runs_test and i < imax:
-    Agt.getState(Env.RetState(),Env.RetReward(),Env.RetStateFeatures())
+    Agt.getState(Env.RetStateFeatures(), Env.RetState(), Env.RetReward())
     # Env.render(0.01,"InTKinter")   #"InConsole"
     Rnr.renderArray(Env.RetGridAsArray(),Env.RetState(),50)
     assert not Env.RetState() == tmpState,"No State Change during Test. State is: " + tmpState 
