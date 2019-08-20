@@ -29,7 +29,7 @@ while c < runs_train:
     if c%100 == 0:print("Train Step: " + str(c),end ='\r')
 
 ### Test
-tmpState = ""; c = 0; runs_test = 10;imax = 20;i=0 #2*(GZ-1);
+tmpState = ""; c = 0; runs_test = 3;imax = 20;i=0 #2*(GZ-1);
 Env.SetRandomStart()
 while c < runs_test and i < imax:
     Agt.getState(Env.RetStateFeatures(), Env.RetState(), Env.RetReward())
@@ -48,12 +48,18 @@ while c < runs_test and i < imax:
 Agt.RoundQ(2)
 Agt.CreateQListFromQTable()
 
-### Print Results
-# Agt.printSequence100("SeqRews-Grid.csv","w")
-Agt.printQTable("Q-Grid.csv","w")
-Agt.printQList("QList-Grid.csv","w")
-# Agt.printQwithFeatures("Features-x.csv","Feature-Q.csv","w")
+# tmpQ = Agt.RetQTable()
+# tmpStates = Agt.RetFeatStates()
+# tmpQList = Agt.RetQList()
+# Agt.reset()
+# Agt.ImportQTable(tmpStates,tmpQ)
+# Agt.ImportQList(tmpQList)
+# arr = Agt.Importcsv("Q-Grid.csv")
 
+### Print Results
+Agt.printSequence100("csv/SeqRews-Grid.csv","w")
+Agt.printQTable("csv/Q-Grid.csv","w")
+Agt.printQList("csv/QList-Grid.csv","w")
 
 ### myTracer
 # arr = EnvGrid.tr.getCalls(); print(*arr, sep="\n")

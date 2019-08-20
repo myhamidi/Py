@@ -1,5 +1,6 @@
 import myTracer;tr = myTracer.glTracer
-
+import pathlib
+import pandas as pd
 import random
 
 class typRewState:
@@ -41,6 +42,7 @@ class clsAgent:
         tr.call("clsAgent.perceiveState")
         idx = self.pvRetIndex(strState,reward,featState)
         self.pvExtendSequence(idx, featState, reward)
+        self.pvSequence_ResetRewardOnTerminal()
         self.pvExtendTransitionMatrix()
         self.pvUpdateQ(self.RewStates[idx].visited, self.alpha, self.gamma)
 
@@ -84,7 +86,34 @@ class clsAgent:
                         arr.append(0)
                 arr.append(self.Q[i][j])
                 self.QList.append(arr)
-    
+
+    def ImportQTable(self,FeatStates,QTable):
+        #Check StateFeatures
+        assert len(self.actions) == len(QTable[0]), "Q Table Cols != Number of actions. Numer of actions is: " + str(len(self.actions))
+        assert self.RewStates == [], "self.RewStates not empty"
+        assert self.Q == [], "Q Table not empty"
+
+        for i in range(len(FeatStates)):
+            for j in range(len(FeatStates[i])):
+                self.pvAppendNewState(typRewState("",FeatStates[i],0,0,0),FeatStates[i])
+        
+        for i in range(len(QTable)):
+            for j in range(len(QTable[i])):
+                self.Q[i][j] = QTable[i][j]
+                #MOHI
+
+    def ImportQList(self,Qlist):
+        assert self.QList == [], "Q List not empty"
+        for i in range(len(Qlist)):
+            self.QList.append([])
+            for j in range(len(Qlist[i])):
+               self.QList[i].append(Qlist[i][j])
+
+    def Importcsv(self, path):
+        return pd.read_csv(path,skiprows = 0,
+                      na_values = "?", comment='\t',
+                      sep="|",skipinitialspace=True,error_bad_lines=False)
+
     def resetSequenceRewards(self):
         tr.call("clsAgent.resetSequenceRewards")
         self.SequenceRewards = []
@@ -92,11 +121,28 @@ class clsAgent:
     def resetSequenceRewardsTest(self):
         tr.call("clsAgent.resetSequenceRewardsTest")
         self.SequenceRewardsTest = []
-    
+
+    def reset(self):
+        self.RewStates = [] 
+        self.Q = [] 
+        self.QList = []
+
     def setLearningParameter(self,alpha, gamma):
         tr.call("clsAgent.setLearningParameter")
         self.alpha = alpha
         self.gamma = gamma
+
+    def RetQTable(self):
+        return self.Q
+
+    def RetQList(self):
+        return self.QList
+
+    def RetFeatStates(self):
+        arr = []
+        for i in range(len(self.RewStates)):
+            arr.append(self.RewStates[i].features)
+        return arr
 
 #Private:
     def pvNextRandInt(self):
@@ -108,9 +154,15 @@ class clsAgent:
 
     def pvSequenceTest_ResetRewardOnTerminal(self):
         if len(self.SequenceRewardsTest) >1:
-            s1,_,_,_ = self.SequenceRewardsTest[-1]; s2,_,_,_ = self.SequenceRewardsTest[-2]
+            s1,r1,_,_ = self.SequenceRewardsTest[-1]; s2,r2,_,_ = self.SequenceRewardsTest[-2]
             if "terminal" in str(self.RewStates[s2].state) and not "terminal" in str(self.RewStates[s1].state):
-                s1,_,a,ty = self.SequenceRewardsTest[-1]; self.SequenceRewardsTest[-1] = (s1,0,a,ty)
+                s1,_,a,ty = self.SequenceRewardsTest[-1]; self.SequenceRewardsTest[-1] = (s1,r1-r2,a,ty)
+    
+    def pvSequence_ResetRewardOnTerminal(self):
+        if len(self.SequenceRewards) >1:
+            s1,r1,_,_ = self.SequenceRewards[-1]; s2,r2,_,_ = self.SequenceRewards[-2]
+            if "terminal" in str(self.RewStates[s2].state) and not "terminal" in str(self.RewStates[s1].state):
+                s1,_,a,ty = self.SequenceRewards[-1]; self.SequenceRewards[-1] = (s1,r1-r2,a,ty)
 
     def pvExtendSequence(self,idx, featState,reward):
         if len(self.SequenceRewards) == 0:r=0
@@ -168,8 +220,6 @@ class clsAgent:
         r = r1-r2
         if not "terminal" in str(self.RewStates[s].state):
             self.Q[s][a] = self.Q[s][a] + alpha*(r +gamma*max(self.Q[s1]) - self.Q[s][a])
-        else:
-            self.SequenceRewards[-1] = (s1,0,a,ty)
 
     # def pvExtendFeatureStates(self):
     #     if len (self.SequenceRewards)>1: #start from 2nd step
@@ -197,7 +247,7 @@ class clsAgent:
         f = open(textfile,xwr)
         f.write("Sequences 100\n")
         f.write("stateIndex|stateFeatures|state|reward|actionIndex|greed\n")
-        #Create evenly distributed indices
+        #Create evenly distributed indices 0 to 99 of all terminal states-> arr
         arr = []; arrTerminal = []
         for i in range(len(self.SequenceRewards)):
             s,_,_,_ = self.SequenceRewards[i]
@@ -205,6 +255,7 @@ class clsAgent:
                 arrTerminal.append(i)
         for i in range(100):
             arr.append(int(i * len(arrTerminal)/99))
+        #Take all sequence steps between arr[i] to arr[i]+1
         for i in range(99):
             for j in range(arrTerminal[arr[i]+1] - arrTerminal[arr[i]]):
                     s,r,a,ty = self.SequenceRewards[arrTerminal[arr[i]]+j+1]
@@ -231,7 +282,10 @@ class clsAgent:
             f.write("feat "+str(k)+sep)    
         f.write("visited"+sep)
         for k in range(nactions):
-            f.write(self.actions[k]+sep)
+            if k == nactions-1:
+                f.write(self.actions[k])
+            else:
+                f.write(self.actions[k]+sep)
         f.write("\n") 
         #Data
         for i in range(len(self.RewStates)):
@@ -241,7 +295,10 @@ class clsAgent:
                 tmpstr += str(self.RewStates[i].features[j]) + sep    
             tmpstr += str(self.RewStates[i].visited) + sep 
             for j in range(nactions):
-                tmpstr += str(self.Q[i][j]) + sep
+                if j == nactions-1:
+                    tmpstr += str(self.Q[i][j])
+                else:
+                    tmpstr += str(self.Q[i][j]) + sep
             f.write(tmpstr + "\n")
 
     def printQList(self,textfile,xwr):
@@ -253,9 +310,12 @@ class clsAgent:
             f.write("feat "+str(k)+sep)    
         for k in range(nactions):
             f.write(self.actions[k]+sep)
-        f.write("Q"+sep+"\n") 
+        f.write("Q\n") 
         for i in range(len(self.QList)):
             tmpstr = ""
             for j in range(len(self.QList[i])):
-                tmpstr += str(self.QList[i][j])+sep
+                if j == len(self.QList[i])-1:
+                   tmpstr += str(self.QList[i][j])
+                else: 
+                    tmpstr += str(self.QList[i][j])+sep
             f.write(tmpstr + "\n")
