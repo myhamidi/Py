@@ -9,7 +9,8 @@ Original file is located at
 # Grid World
 """
 
-#Grid rendering based on colab widgets.grid
+# Grid rendering based on colab widgets.grid
+# For larger girds (>20 cells) this gets slow
 from google.colab import widgets
 
 class clsGridCW:
@@ -40,12 +41,86 @@ class clsGridCW:
           if GridArr[i][j] == 2: #termnal
             print(" T ")
 
-# from time import sleep
+# import time
 
 # #Example Implenetation
-# Rnd = clsGridCW(2,3,"")
-# Rnd.renderArray([[0,0,0],[1,0,0]],"")
-# time.sleep(0.5)
-# Rnd.renderArray([[0,0,0],[0,1,0]],"")
-# time.sleep(0.5)
-# Rnd.renderArray([[0,0,0],[0,0,2]],"")
+# Rnd = clsGridCW(2,10,"")
+# for _ in range(10):
+#   Rnd.renderArray([[0,0,0,0,0,0,0,0,0,0],[1,0,0,0,0,0,0,0,0,0]],"")
+#   time.sleep(0.1)
+#   Rnd.renderArray([[0,0,0,0,0,0,0,0,0,0],[0,1,0,0,0,0,0,0,0,0]],"")
+#   time.sleep(0.1)
+
+# Grid rendering based on colab widgets.grid
+# For larger girds (>20 cells) this gets slow
+from google.colab import widgets
+from IPython.display import display, clear_output
+
+class clsGridPRINT:
+  def __init__(self, rows, cols, text):
+    self.limit_cols = cols
+    self.limit_rows = rows
+    self.text = text
+    self.grid = self._CreateGridString()
+        
+  def RetGrid(self):
+    return self.grid
+  
+  def _CreateGridString(self, GridArr = []):
+    #Header
+    gridStr = "  |"
+    for i in range(self.limit_cols):
+      gridStr += " " + str(i) +" |"
+    gridStr += "\n"
+    gridStr += "--|"
+    for i in range(self.limit_cols):
+      gridStr += "---|"
+    gridStr += "\n"
+      
+    #Content
+    for i in range(self.limit_rows):
+      gridStr += str(i) + " |"
+      for j in range (self.limit_cols):
+        if GridArr == []:
+          gridStr +="   |"
+        else:
+          if GridArr[i][j] == 0: #empty 
+            gridStr +="   |"
+          if GridArr[i][j] == 1: #current position
+            gridStr += " x |"
+          if GridArr[i][j] == 2: #terminal
+            gridStr += " T |"
+      gridStr += "\n"    
+    
+    #Return
+    return gridStr
+  
+  
+  def renderArray(self, GridArr,text):
+    clear_output(wait=True)
+    if not text =="": print(text)
+    assert len(GridArr) == self.limit_rows, "Array size does not match to Grid Row size"
+    for i in range(self.limit_rows):
+      assert len(GridArr[i]) == self.limit_cols,"Array size does not match to Grid Col Size of Row " + str(i+1)
+    
+    self.grid = self.grid = self._CreateGridString(GridArr)
+#     print(self.grid)
+    display(print(self.grid))      #reduces the jitter of print
+
+# import time
+
+# slptime = 0.2
+
+# #Example Implenetation
+# Rnd = clsGridPRINT(2,10,"")
+# print(Rnd.RetGrid())
+# print("Hallo")
+# for _ in range(5):
+#   Rnd.renderArray([[0,0,0,0,0,0,0,0,0,0],[1,0,0,0,0,0,0,0,0,0]],"")
+#   time.sleep(slptime)
+#   Rnd.renderArray([[0,0,0,0,0,0,0,0,0,0],[0,1,0,0,0,0,0,0,0,0]],"")
+#   time.sleep(slptime)
+#   Rnd.renderArray([[0,0,0,0,0,0,0,0,0,0],[0,0,1,0,0,0,0,0,0,0]],"")
+#   time.sleep(slptime)
+#   Rnd.renderArray([[0,0,0,0,0,0,0,0,0,0],[0,0,0,1,0,0,0,0,0,0]],"")
+#   time.sleep(slptime)
