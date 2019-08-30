@@ -20,7 +20,7 @@ Agt.setLearningParameter(0.2,1)
 ### Train
 c = 0; runs_train = 3000
 while c < runs_train:
-    Agt.perceiveState(Env.RetStateFeatures(),Env.RetState(),Env.RetReward())
+    Agt.perceiveState(Env.RetStateFeatures(), Env.RetReward())
     if Env.IsCurrentStateTerminal():
         c+=1
         Env.Reset()
@@ -29,10 +29,10 @@ while c < runs_train:
     if c%100 == 0:print("Train Step: " + str(c),end ='\r')
 
 ### Test
-tmpState = ""; c = 0; runs_test = 3;imax = 20;i=0 #2*(GZ-1);
+tmpState = ""; c = 0; runs_test = 5;imax = 20;i=0 #2*(GZ-1);
 Env.SetRandomStart()
 while c < runs_test and i < imax:
-    Agt.getState(Env.RetStateFeatures(), Env.RetState(), Env.RetReward())
+    Agt.getState(Env.RetStateFeatures(), Env.RetReward())
     # Env.render(0.01,"InTKinter")   #"InConsole"
     Rnr.renderArray(Env.RetGridAsArray(),Env.RetState(),50)
     assert not Env.RetState() == tmpState,"No State Change during Test. State is: " + tmpState 
@@ -57,7 +57,7 @@ Agt.CreateQListFromQTable()
 # arr = Agt.Importcsv("Q-Grid.csv")
 
 ### Print Results
-Agt.printSequence100("csv/SeqRews-Grid.csv","w")
+# Agt.printSequence100("csv/SeqRews-Grid.csv","w")
 Agt.printQTable("csv/Q-Grid.csv","w")
 Agt.printQList("csv/QList-Grid.csv","w")
 

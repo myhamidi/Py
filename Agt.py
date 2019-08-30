@@ -1,11 +1,9 @@
-import myTracer;tr = myTracer.glTracer
 import pathlib
 import pandas as pd
 import random
 
 class typRewState:
     def __init__(self,stateStr,statefeat,reward,value,visited):
-        tr.call("typRewState.init")
         self.state = stateStr
         self.features = statefeat
         self.reward = reward
@@ -15,13 +13,11 @@ class typRewState:
 class clsAgent:
 #Public:
     def __init__(self,actionlist):
-        tr.call("clsAgent.__init__")
         self.RewStates = []         #Typ: typRewState. Remembers all (unique) states visited.
         self.Sequence = []
         self.SequenceRewards = []   #Typ: (s,r,a,actionType). Remembers state (idx), reward and action
         self.SequenceFeatures = []   #Typ: (s,r,a,actionType). Remembers state (idx), reward and action
         self.SequenceRewardsTest = []   #Typ: (s,r,a,actionType). Remembers state (idx), reward and action
-        self.TransitionMatrix = []  #Typ: List of Lists of tuples[[],[],...]
         self.lastSeqStep = ()
         self.actions = actionlist
         self.LastAction = ""
@@ -38,28 +34,24 @@ class clsAgent:
         random.shuffle(self.rand)
         self.randIdx = 0
 
-    def perceiveState(self,featState,strState,reward):
-        tr.call("clsAgent.perceiveState")
-        idx = self.pvRetIndex(strState,reward,featState)
-        self.pvExtendSequence(idx, featState, reward)
-        self.pvSequence_ResetRewardOnTerminal()
-        self.pvExtendTransitionMatrix()
-        self.pvUpdateQ(self.RewStates[idx].visited, self.alpha, self.gamma)
+    def perceiveState(self, state, reward):
+        self._UpdateRewStates(state, reward)
+        self._SequenceAppend(state, reward)
+        self.lastSeqStep = self.SequenceRewards[-1]
+        self._UpdateQOfLastSequenceStep(self.alpha, self.gamma)
 
-    def getState(self,featState,strState,reward):
-        tr.call("clsAgent.takeState")
-        idx = self.pvRetIndex(strState,0,featState)
-        self.pvExtendSequenceTest(idx, featState, reward)
-        self.pvSequenceTest_ResetRewardOnTerminal()
+    def getState(self, state, reward):
+        self._UpdateRewStates(state, 0)
+        self._SequenceTestAppend(state, reward)
+        self.lastSeqStep = self.SequenceRewardsTest[-1]
 
     def nextAction(self,epsilon):
-        tr.call("clsAgent.nextAction")
         rand = self.pvNextRandInt()
-        if rand < epsilon: #Random
+        if rand < epsilon: # Random
             self.LastActionType = "r"
             self.LastAction = random.choice(self.actions)
             self.LastActionInt =self.actions.index(self.LastAction)
-        else: #Greedy
+        else: # Greedy
             self.LastActionType = "g"
             s,_,_,_ = self.lastSeqStep      
             self.LastActionInt = self.Q[s].index(max(self.Q[s]))
@@ -95,7 +87,9 @@ class clsAgent:
 
         for i in range(len(FeatStates)):
             for j in range(len(FeatStates[i])):
-                self.pvAppendNewState(typRewState("",FeatStates[i],0,0,0),FeatStates[i])
+                self.RewStates.append(typRewState("",FeatStates[i],0,0,0))
+                self.Q.append([0]*len(self.actions))
+                # self.pvAppendNewState(typRewState("",FeatStates[i],0,0,0),FeatStates[i])
         
         for i in range(len(QTable)):
             for j in range(len(QTable[i])):
@@ -115,11 +109,9 @@ class clsAgent:
                       sep="|",skipinitialspace=True,error_bad_lines=False)
 
     def resetSequenceRewards(self):
-        tr.call("clsAgent.resetSequenceRewards")
         self.SequenceRewards = []
 
     def resetSequenceRewardsTest(self):
-        tr.call("clsAgent.resetSequenceRewardsTest")
         self.SequenceRewardsTest = []
 
     def reset(self):
@@ -128,7 +120,6 @@ class clsAgent:
         self.QList = []
 
     def setLearningParameter(self,alpha, gamma):
-        tr.call("clsAgent.setLearningParameter")
         self.alpha = alpha
         self.gamma = gamma
 
@@ -151,12 +142,6 @@ class clsAgent:
         if self.randIdx == 1000: 
             self.randIdx = 0
         return self.rand[self.randIdx]/1000
-
-    def pvSequenceTest_ResetRewardOnTerminal(self):
-        if len(self.SequenceRewardsTest) >1:
-            s1,r1,_,_ = self.SequenceRewardsTest[-1]; s2,r2,_,_ = self.SequenceRewardsTest[-2]
-            if "terminal" in str(self.RewStates[s2].state) and not "terminal" in str(self.RewStates[s1].state):
-                s1,_,a,ty = self.SequenceRewardsTest[-1]; self.SequenceRewardsTest[-1] = (s1,r1-r2,a,ty)
     
     def pvSequence_ResetRewardOnTerminal(self):
         if len(self.SequenceRewards) >1:
@@ -164,86 +149,54 @@ class clsAgent:
             if "terminal" in str(self.RewStates[s2].state) and not "terminal" in str(self.RewStates[s1].state):
                 s1,_,a,ty = self.SequenceRewards[-1]; self.SequenceRewards[-1] = (s1,r1-r2,a,ty)
 
-    def pvExtendSequence(self,idx, featState,reward):
-        if len(self.SequenceRewards) == 0:r=0
-        else: _,r,_,_ = self.SequenceRewards[-1]
-        self.SequenceFeatures.append(featState)
-        self.SequenceRewards.append((idx,round(r+reward,1),self.LastActionInt,self.LastActionType))
-        self.lastSeqStep = self.SequenceRewards[-1]
+    def _SequenceAppend(self,featState,reward):
+        idx = [state.features for state in self.RewStates].index(featState)
+        r = self._RetRewardOfLastSequenceStep()
+        self.SequenceRewards.append((idx,round(r + reward,1),self.LastActionInt,self.LastActionType))
 
-    def pvExtendSequenceTest(self,idx,featState,reward):
-        if len(self.SequenceRewardsTest) == 0:r=0
-        else: _,r,_,_ = self.SequenceRewardsTest[-1]
+    def _RetRewardOfLastSequenceStep(self):
+        if self._IsFirstStepOfEpoch(): 
+            return 0
+        else:
+            _,r,_,_ = self.lastSeqStep
+            return r
+
+    def _IsFirstStepOfEpoch(self):
+        if len(self.SequenceRewards) == 0:
+            return True
+        else:
+            s,_,_,_ = self.lastSeqStep
+            if self.RewStates[s].features[-1] == 1:
+                return True
+            else:
+                return False
+
+    def _SequenceTestAppend(self, featState, reward):
+        idx = [state.features for state in self.RewStates].index(featState)
+        r = self._RetRewardOfLastSequenceStep()
         self.SequenceRewardsTest.append((idx, round(r+reward,1), self.LastActionInt, self.LastActionType))
-        self.lastSeqStep = self.SequenceRewardsTest[-1]
 
-    def pvAppendNewState(self,RewardState,featureState):
-        tr.call("clsAgent.pvAppendNewState")
-        self.RewStates.append(RewardState)
-        # self.FeatureStates.append(featureState)
-        self.TransitionMatrix.append([])
-        self.pvAddQrow()
-
-    def pvRetIndex(self,strState,reward,featureState):
-        tr.call("clsAgent.pvRetIndex")
+    def _UpdateRewStates(self,state, reward):
         for i in range(len(self.RewStates)):
-            if featureState == self.RewStates[i].features:
+            if state == self.RewStates[i].features:
                 self.RewStates[i].visited +=1
-                return i  
-        self.pvAppendNewState(typRewState(strState,featureState,reward,0,0),featureState)
+                return
+        self.RewStates.append(typRewState("",state,reward,0,0))
+        self.Q.append([0]*len(self.actions))
         i = len(self.RewStates) - 1
         self.RewStates[i].visited +=1
-        return i 
-
-    def pvExtendTransitionMatrix(self): #Type StateTransition: (1,3). From 1 to 3
-        tr.call("clsAgent.pvExtendTransitionMatrix")
-        if len (self.SequenceRewards)>1: #start from 2nd step
-            FromIdx,_,_,_ = self.SequenceRewards[-2]
-            ToIdx,_,_,_ = self.SequenceRewards[-1]
-            if not (self.LastAction,ToIdx) in self.TransitionMatrix[FromIdx]:
-                self.TransitionMatrix[FromIdx].append((self.LastAction,ToIdx))
-                self.TransitionMatrix[FromIdx].sort()
-
-    def pvAddQrow(self):
-        tr.call("clsAgent.pvAddQrow")
-        self.Q.append([])
-        for  _ in range(len(self.actions)):
-            self.Q[-1].append(0)
     
-    def pvUpdateQ(self, visited, alpha, gamma):
-        tr.call("clsAgent.pvUpdateQ")
-        alpha = max(1/visited,self.alpha)
+    def _UpdateQOfLastSequenceStep(self, alpha, gamma):
         if len(self.SequenceRewards)<3: 
             return
-        s1,r1,a,ty = self.SequenceRewards[-1]
+        s1,r1,a,_ = self.SequenceRewards[-1]
         s,r2,_,_ = self.SequenceRewards[-2]
         r = r1-r2
-        if not "terminal" in str(self.RewStates[s].state):
+        alpha = max(1/self.RewStates[s1].visited,self.alpha)
+        if self.RewStates[s].features[-1] == 0: # non terminal
             self.Q[s][a] = self.Q[s][a] + alpha*(r +gamma*max(self.Q[s1]) - self.Q[s][a])
 
-    # def pvExtendFeatureStates(self):
-    #     if len (self.SequenceRewards)>1: #start from 2nd step
-    #         FromIdx,_,_,_ = self.SequenceRewards[-2]
-    #         ToIdx,_,_,_ = self.SequenceRewards[-1]
-    #         if not (self.LastAction,ToIdx) in self.TransitionMatrix[FromIdx]:
-    #             self.TransitionMatrix[FromIdx].append((self.LastAction,ToIdx))
-    #             self.TransitionMatrix[FromIdx].sort()
-
-    def printTransitions(self,textfile,xwr):
-        tr.call("clsAgent.printTransitions")
-        f = open(textfile,xwr)
-        f.write("Transitions\n")
-        f.write("state|visited|q1|q2\n")    
-        for i in range(len(self.TransitionMatrix)):
-            tmpstr = self.RewStates[i].state + "|" + str(self.RewStates[i].visited) + "|" 
-            for j in range(len(self.TransitionMatrix[i])):
-                a,toState = self.TransitionMatrix[i][j]
-                aIdx = self.actions.index(a)
-                tmpstr += a + self.RewStates[toState].state + "Q:" + str(round(self.Q[i][aIdx],4)) + "|"
-            f.write(tmpstr + "\n")
-
     def printSequence100(self,textfile,xwr):
-        tr.call("clsAgent.printSequence100")
         f = open(textfile,xwr)
         f.write("Sequences 100\n")
         f.write("stateIndex|stateFeatures|state|reward|actionIndex|greed\n")
@@ -251,7 +204,7 @@ class clsAgent:
         arr = []; arrTerminal = []
         for i in range(len(self.SequenceRewards)):
             s,_,_,_ = self.SequenceRewards[i]
-            if "terminal" in str(self.RewStates[s].state):
+            if self.RewStates[s].features[-1] == 1:
                 arrTerminal.append(i)
         for i in range(100):
             arr.append(int(i * len(arrTerminal)/99))
@@ -264,7 +217,6 @@ class clsAgent:
                     f.write(str(s) + "|" + str(feat) + "|" + str(va) + "|" + str(r) + "|" + str(a) + "|" + str(ty) + "\n")         
 
     def printSequenceTest(self,textfile,xwr):
-        tr.call("clsAgent.printSequenceTest")
         f = open(textfile,xwr)
         
         f.write("stateIndex|state|reward|actionIndex|greed\n")
@@ -274,7 +226,6 @@ class clsAgent:
             f.write(str(s) + "|" + str(va) + "|" + str(r) + "|" + str(a) + "|" + str(ty) + "\n")  
 
     def printQTable(self,textfile,xwr):  
-        tr.call("clsAgent.printQ")
         sep = " | "; nfeat = len(self.RewStates[0].features); nactions = len(self.actions)
         f = open(textfile,xwr)
         #Header
@@ -302,7 +253,6 @@ class clsAgent:
             f.write(tmpstr + "\n")
 
     def printQList(self,textfile,xwr):
-        tr.call("clsAgent.printQ")
         sep = " | "; nfeat = len(self.RewStates[0].features); nactions = len(self.actions)
         f = open(textfile,xwr)
         #Header
@@ -319,3 +269,6 @@ class clsAgent:
                 else: 
                     tmpstr += str(self.QList[i][j])+sep
             f.write(tmpstr + "\n")
+
+    def ping(self):
+        print("Agent here")
