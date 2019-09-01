@@ -13,7 +13,7 @@ Rnr = Render.clsGrid(GZx,GZy,"")
 
 ### Config
 Env.SetTerminalState((0,0)); Env.SetRewardAtState((0,0),0)
-# Env.SetTerminalState((GZx-1,GZy-1)); Env.SetRewardAtState((GZx-1,GZy-1),0)
+Env.SetTerminalState((GZx-1,GZy-1)); Env.SetRewardAtState((GZx-1,GZy-1),0)
 Env.SetStartPosition((int(GZx/2),int(GZy/2)))
 Agt.setLearningParameter(0.2,1)
 
@@ -45,21 +45,6 @@ while c < runs_test and i < imax:
     eps = 0
     Env.Next(Agt.nextAction(eps))
 
-Agt.RoundQ(2)
-Agt.CreateQListFromQTable()
-
-# tmpQ = Agt.RetQTable()
-# tmpStates = Agt.RetFeatStates()
-# tmpQList = Agt.RetQList()
-# Agt.reset()
-# Agt.ImportQTable(tmpStates,tmpQ)
-# Agt.ImportQList(tmpQList)
-# arr = Agt.Importcsv("Q-Grid.csv")
-
-### Print Results
-# Agt.printSequence100("csv/SeqRews-Grid.csv","w")
-Agt.printQTable("csv/Q-Grid.csv","w")
-Agt.printQList("csv/QList-Grid.csv","w")
-
-### myTracer
-# arr = EnvGrid.tr.getCalls(); print(*arr, sep="\n")
+Agt.SortStates()
+Agt.WriteQtoCSV("csv/Q-EnvGrid.csv")
+Agt.WriteQtoCSV("csv/QList-EnvGrid.csv", SplitCols=True)
