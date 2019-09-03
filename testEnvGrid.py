@@ -29,13 +29,14 @@ while c < runs_train:
     if c%100 == 0:print("Train Step: " + str(c),end ='\r')
 
 ### Test
-tmpState = ""; c = 0; runs_test = 5;imax = 20;i=0 #2*(GZ-1);
+tmpState = ""; c = 0; runs_test = 0;imax = 20;i=0 #2*(GZ-1);
 Env.SetRandomStart()
 while c < runs_test and i < imax:
     Agt.getState(Env.RetStateFeatures(), Env.RetReward())
     # Env.render(0.01,"InTKinter")   #"InConsole"
     Rnr.renderArray(Env.RetGridAsArray(),Env.RetState(),50)
-    assert not Env.RetState() == tmpState,"No State Change during Test. State is: " + tmpState 
+    if Env.RetState() == tmpState: #,"No State Change during Test. State is: " + tmpState 
+        stop = 0
     i +=1
     tmpState = Env.RetState()
     if Env.IsCurrentStateTerminal():
@@ -46,5 +47,7 @@ while c < runs_test and i < imax:
     Env.Next(Agt.nextAction(eps))
 
 Agt.SortStates()
-Agt.WriteQtoCSV("csv/Q-EnvGrid.csv")
-Agt.WriteQtoCSV("csv/QList-EnvGrid.csv", SplitCols=True)
+# Agt.WriteQtoCSV("csv/Q-EnvGrid.csv")
+# Agt.WriteQtoCSV("csv/QList-EnvGrid.csv", SplitCols=True)
+
+Agt.WriteSeqtoCSV("csv/Seq-EnvGrid.csv",SplitCols=True)

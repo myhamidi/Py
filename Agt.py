@@ -10,7 +10,16 @@ class typState:
         self.Q = Q
         self.value = value 
         self.visited = visited
-        
+
+class typStep:
+    def __init__(self, stateStr = "", statefeatures = [] , reward = 0.0, totalreward = 0.0, Q = [], actionInt = -1, action = "", rg = "r"):
+        self.stateStr = stateStr
+        self.statefeat = statefeatures
+        self.reward = reward
+        self.totalreward = totalreward
+        self.actionInt = actionInt
+        self.action = action
+        self.rg = rg
 
 class clsAgent:
 #Public:
@@ -21,11 +30,12 @@ class clsAgent:
         self.SequenceFeatures = []   #Typ: (s,r,a,actionType). Remembers state (idx), reward and action
         self.SequenceRewardsTest = []   #Typ: (s,r,a,actionType). Remembers state (idx), reward and action
         self.lastSeqStep = ()
+        self.lastStep = typStep()
         self.actions = actionlist
         self.statefeatures = featurelist
         self.LastAction = ""
         self.LastActionType = "" #g,r (greedy, random)
-        self.LastActionInt = 0
+        self.LastActionInt = -1
         self.Q = []                 #QTable, Type: Table of RewStates rows x action cols
         # self.FeatureStates= []      #Typ: List of state representation by Features.List of Lists [[],[],...]. Matchin index of self.States
         self.QList = []          #Typ: List of QList represenation by features. Len = rows x cols from Q table.Lists [[],[],...]
@@ -43,6 +53,8 @@ class clsAgent:
         self.lastSeqStep = self.SequenceRewards[-1]
         self._UpdateQOfLastSequenceStep(self.alpha, self.gamma)
 
+        self.lastStep = self.Sequence[-1]
+
     def getState(self, state, reward):
         self._UpdateStates(state, 0)
         self._SequenceTestAppend(state, reward)
@@ -56,7 +68,11 @@ class clsAgent:
             self.LastActionInt =self.actions.index(self.LastAction)
         else: # Greedy
             self.LastActionType = "g"
-            s,_,_,_ = self.lastSeqStep      
+            s1,_,_,_ = self.lastSeqStep
+            statefeatures = [state.features for state in self.States]
+            s = statefeatures.index(self.Sequence[-1].statefeat)
+            assert s == s1, "Oh"
+            #     stop = 0    
             # self.LastActionInt = self.Q[s].index(max(self.Q[s]))
             self.LastActionInt = self.States[s].Q.index(max(self.States[s].Q))
             self.LastAction = self.actions[self.LastActionInt]     
@@ -71,29 +87,9 @@ class clsAgent:
                     self.States[j], self.States[j+1] = self.States[j+1], self.States[j]
 
     def RoundQ(self, numdec):
-        # for i in range(len(self.States)):
-        #     for j in range(len(self.Q[i])):
-        #         # self.Q[i][j] = round(self.Q[i][j], numdec)
-        #         self.States[i].Q[j]
         for state in self.States:
             for j in range(len(state.Q)):
                 state.Q[j] = round(state.Q[j],numdec)
-    
-    def CreateQListFromQpd(self):
-        assert len(self.States) == len(self.Q), "Length of Agt states != Agt Q rows."
-        self.QList = []
-        for i in range(len(self.States)):
-            for j in range(len(self.Q[i])):
-                arr = []
-                for k in range(len(self.States[i].features)):
-                    arr.append((self.States[i].features[k]))
-                for k in range(len(self.actions)):
-                    if k == j:
-                        arr.append(1)
-                    else:
-                        arr.append(0)
-                arr.append(self.Q[i][j])
-                self.QList.append(arr)
 
     def ImportQTable(self,FeatStates,Qpd):
         #Check StateFeatures
@@ -139,18 +135,6 @@ class clsAgent:
         self.alpha = alpha
         self.gamma = gamma
 
-    def RetQpd(self):
-        return self.Q
-
-    def RetQList(self):
-        return self.QList
-
-    def RetFeatStates(self):
-        arr = []
-        for i in range(len(self.States)):
-            arr.append(self.States[i].features)
-        return arr
-
 #Private:
     def pvNextRandInt(self):
         # Get Next Random Number from list
@@ -163,23 +147,30 @@ class clsAgent:
         idx = [state.features for state in self.States].index(featState)
         r = self._RetRewardOfLastSequenceStep()
         self.SequenceRewards.append((idx,round(r + reward,1),self.LastActionInt,self.LastActionType))
+        
+        if len(self.Sequence) == 0:
+            r = 0 
+        else:
+            r = self.Sequence[-1].totalreward
+        self.Sequence.append(typStep(actionInt = self.LastActionInt, action = self.LastAction, \
+            statefeatures = featState, reward = reward, totalreward = r + reward, rg = self.LastActionType))
 
     def _RetRewardOfLastSequenceStep(self):
-        if self._IsFirstStepOfEpoch(): 
+        if self._LastSeqIsFirstStep(): 
             return 0
         else:
             _,r,_,_ = self.lastSeqStep
             return r
-
-    def _IsFirstStepOfEpoch(self):
-        if len(self.SequenceRewards) == 0:
+    
+    def _LastSeqIsFirstStep(self):
+        if len(self.Sequence) == 0:
+            return True
+        if len(self.Sequence) == 1:
+            return False                # tbd
+        if self.Sequence[-1].statefeat[-1] == 1:
             return True
         else:
-            s,_,_,_ = self.lastSeqStep
-            if self.States[s].features[-1] == 1:
-                return True
-            else:
-                return False
+            return False
 
     def _SequenceTestAppend(self, featState, reward):
         idx = [state.features for state in self.States].index(featState)
@@ -192,7 +183,7 @@ class clsAgent:
                 self.States[i].visited +=1
                 return
         self.States.append(typState(features = state, reward = reward))
-        self.Q.append([0]*len(self.actions)) # to be obs
+        # self.Q.append([0]*len(self.actions)) # to be obs
         self.States[-1].Q = [0]*len(self.actions)
         self.States[-1].visited +=1
     
@@ -206,27 +197,7 @@ class clsAgent:
         if self.States[s].features[-1] == 0: # non terminal
             # self.Q[s][a] = self.Q[s][a] + alpha*(r +gamma*max(self.Q[s1]) - self.Q[s][a])
             self.States[s].Q[a] = self.States[s].Q[a] + alpha*(r +gamma*max(self.States[s1].Q) - self.States[s].Q[a])
-            # assert self.Q[s] == self.States[s].Q, str(self.States[s].features) + str(self.Q[s1]) + "|" + str(self.States[s].Q)
-            
-    def printSequence100(self,textfile,xwr):
-        f = open(textfile,xwr)
-        f.write("Sequences 100\n")
-        f.write("stateIndex|stateFeatures|state|reward|actionIndex|greed\n")
-        #Create evenly distributed indices 0 to 99 of all terminal states-> arr
-        arr = []; arrTerminal = []
-        for i in range(len(self.SequenceRewards)):
-            s,_,_,_ = self.SequenceRewards[i]
-            if self.States[s].features[-1] == 1:
-                arrTerminal.append(i)
-        for i in range(100):
-            arr.append(int(i * len(arrTerminal)/99))
-        #Take all sequence steps between arr[i] to arr[i]+1
-        for i in range(99):
-            for j in range(arrTerminal[arr[i]+1] - arrTerminal[arr[i]]):
-                    s,r,a,ty = self.SequenceRewards[arrTerminal[arr[i]]+j+1]
-                    feat = self.SequenceFeatures[arrTerminal[arr[i]]+j+1]
-                    va = self.States[s].state
-                    f.write(str(s) + "|" + str(feat) + "|" + str(va) + "|" + str(r) + "|" + str(a) + "|" + str(ty) + "\n")         
+            # assert self.Q[s] == self.States[s].Q, str(self.States[s].features) + str(self.Q[s1]) + "|" + str(self.States[s].Q)      
 
     def printSequenceTest(self,textfile,xwr):
         f = open(textfile,xwr)
@@ -261,3 +232,42 @@ class clsAgent:
             Qlistpd["visited"] = Qpd["visited"]
             # WRITE TO FILE:
             Qlistpd.to_csv(path, sep='|', encoding='utf-8', index = False)
+
+    def WriteSeqtoCSV(self, path, SplitCols = False):
+        # Create full size data frame
+        Seqpd = pd.DataFrame()
+        Seqpd["actionInt"] = [step.actionInt for step in self.Sequence]
+        Seqpd["action"] = [step.action for step in self.Sequence]
+        
+        if SplitCols == True:
+            for i in range(len(self.actions)):
+                Seqpd["blaction"+str(i)] = 0
+            for index, row in Seqpd.iterrows():
+                for i in range(len(self.actions)):
+                    if row["actionInt"] == i: 
+                        Seqpd.at[index, "blaction"+str(i)] = 1
+        
+        Seqpd["state"] = [step.statefeat for step in self.Sequence]
+        Seqpd["reward"] = [step.reward for step in self.Sequence]
+        Seqpd["rnd_grd"] = [step.rg for step in self.Sequence]
+
+        #Create evenly distributed indices 0 to 99 of all terminal states-> arr
+        arr = []; arrTerminal = []
+        for i in range(len(self.Sequence)):
+            if self.Sequence[i].statefeat[-1] == 1:
+                arrTerminal.append(i)
+        for i in range(100): arr.append(int(i * len(arrTerminal)/99))
+        
+        #Mark all lines between index arr[i] - arr[i+1]
+        Seqpd["mark"] = 0
+        for i in range(99):
+            for j in range(arrTerminal[arr[i]], arrTerminal[arr[i]+1]):
+                Seqpd.at[j, "mark"] = 1
+        
+        # Filter data frame
+        Seq100pd =  Seqpd[Seqpd["mark"] == 1]
+        Seq100pd = Seq100pd.drop(columns = ["mark"])
+
+        # WRITE TO FILE:
+        Seq100pd.to_csv(path, sep='|', encoding='utf-8', index = False)
+      
