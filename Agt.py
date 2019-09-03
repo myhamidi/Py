@@ -26,10 +26,7 @@ class clsAgent:
     def __init__(self, actionlist, featurelist = []):
         self.States = []         #Typ: typState. Remembers all (unique) states visited.
         self.Sequence = []
-        self.SequenceRewards = []   #Typ: (s,r,a,actionType). Remembers state (idx), reward and action
-        self.SequenceFeatures = []   #Typ: (s,r,a,actionType). Remembers state (idx), reward and action
         self.SequenceRewardsTest = []   #Typ: (s,r,a,actionType). Remembers state (idx), reward and action
-        self.lastSeqStep = ()
         self.lastStep = typStep()
         self.actions = actionlist
         self.statefeatures = featurelist
@@ -37,7 +34,6 @@ class clsAgent:
         self.LastActionType = "" #g,r (greedy, random)
         self.LastActionInt = -1
         self.Q = []                 #QTable, Type: Table of RewStates rows x action cols
-        # self.FeatureStates= []      #Typ: List of state representation by Features.List of Lists [[],[],...]. Matchin index of self.States
         self.QList = []          #Typ: List of QList represenation by features. Len = rows x cols from Q table.Lists [[],[],...]
         self.FeatureQ = []          #Typ: single col /List of Q valuse for QList
 
@@ -47,10 +43,9 @@ class clsAgent:
         random.shuffle(self.rand)
         self.randIdx = 0
 
-    def perceiveState(self, state, reward):
+    def perceiveState(self, state, reward, learn = True):
         self._UpdateStates(state, reward)
         self._SequenceAppend(state, reward)
-        self.lastSeqStep = self.SequenceRewards[-1]
         self._UpdateQOfLastSequenceStep(self.alpha, self.gamma)
 
         self.lastStep = self.Sequence[-1]
@@ -58,7 +53,6 @@ class clsAgent:
     def getState(self, state, reward):
         self._UpdateStates(state, 0)
         self._SequenceTestAppend(state, reward)
-        self.lastSeqStep = self.SequenceRewardsTest[-1]
 
     def nextAction(self,epsilon):
         rand = self.pvNextRandInt()
@@ -68,12 +62,8 @@ class clsAgent:
             self.LastActionInt =self.actions.index(self.LastAction)
         else: # Greedy
             self.LastActionType = "g"
-            s1,_,_,_ = self.lastSeqStep
             statefeatures = [state.features for state in self.States]
             s = statefeatures.index(self.Sequence[-1].statefeat)
-            assert s == s1, "Oh"
-            #     stop = 0    
-            # self.LastActionInt = self.Q[s].index(max(self.Q[s]))
             self.LastActionInt = self.States[s].Q.index(max(self.States[s].Q))
             self.LastAction = self.actions[self.LastActionInt]     
         return self.LastAction
@@ -144,14 +134,11 @@ class clsAgent:
         return self.rand[self.randIdx]/1000
 
     def _SequenceAppend(self,featState,reward):
-        idx = [state.features for state in self.States].index(featState)
-        r = self._RetRewardOfLastSequenceStep()
-        self.SequenceRewards.append((idx,round(r + reward,1),self.LastActionInt,self.LastActionType))
-        
-        if len(self.Sequence) == 0:
+        if len(self.Sequence) == 0 or self.Sequence[-1].statefeat[-1] == 1:
             r = 0 
         else:
             r = self.Sequence[-1].totalreward
+        
         self.Sequence.append(typStep(actionInt = self.LastActionInt, action = self.LastAction, \
             statefeatures = featState, reward = reward, totalreward = r + reward, rg = self.LastActionType))
 
@@ -159,8 +146,7 @@ class clsAgent:
         if self._LastSeqIsFirstStep(): 
             return 0
         else:
-            _,r,_,_ = self.lastSeqStep
-            return r
+            return self.lastStep.totalreward
     
     def _LastSeqIsFirstStep(self):
         if len(self.Sequence) == 0:
@@ -174,7 +160,7 @@ class clsAgent:
 
     def _SequenceTestAppend(self, featState, reward):
         idx = [state.features for state in self.States].index(featState)
-        r = self._RetRewardOfLastSequenceStep()
+        r = self.lastStep.reward
         self.SequenceRewardsTest.append((idx, round(r+reward,1), self.LastActionInt, self.LastActionType))
 
     def _UpdateStates(self,state, reward):
@@ -183,21 +169,20 @@ class clsAgent:
                 self.States[i].visited +=1
                 return
         self.States.append(typState(features = state, reward = reward))
-        # self.Q.append([0]*len(self.actions)) # to be obs
         self.States[-1].Q = [0]*len(self.actions)
         self.States[-1].visited +=1
     
     def _UpdateQOfLastSequenceStep(self, alpha, gamma):
-        if len(self.SequenceRewards)<3: 
+        if len(self.Sequence)<3: 
             return
-        s1,r1,a,_ = self.SequenceRewards[-1]
-        s,r2,_,_ = self.SequenceRewards[-2]
-        r = r1-r2
+        state1 = self.Sequence[-1].statefeat; s1 = [state.features for state in self.States].index(state1)
+        state = self.Sequence[-2].statefeat; s = [state.features for state in self.States].index(state)
+        r = self.Sequence[-1].reward
+        a = self.Sequence[-1].actionInt
+
         alpha = max(1/self.States[s1].visited,self.alpha)
         if self.States[s].features[-1] == 0: # non terminal
-            # self.Q[s][a] = self.Q[s][a] + alpha*(r +gamma*max(self.Q[s1]) - self.Q[s][a])
             self.States[s].Q[a] = self.States[s].Q[a] + alpha*(r +gamma*max(self.States[s1].Q) - self.States[s].Q[a])
-            # assert self.Q[s] == self.States[s].Q, str(self.States[s].features) + str(self.Q[s1]) + "|" + str(self.States[s].Q)      
 
     def printSequenceTest(self,textfile,xwr):
         f = open(textfile,xwr)
