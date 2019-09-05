@@ -6,29 +6,29 @@ import Agt
 Agt = Agt.clsAgent(["high", "low"])
 
 class testAgt(unittest.TestCase):
-    def test_IsFirstStepOfEpoch(self):
-        self.assertEqual(Agt._IsFirstStepOfEpoch(), True)
+    def test_LastSeqIsFirstStep(self):
+        self.assertEqual(Agt._LastSeqIsFirstStep(), True)
         self.assertEqual(Agt._RetRewardOfLastSequenceStep(),0)
 
         Agt.perceiveState([1,0],-1)
-        self.assertEqual(Agt._IsFirstStepOfEpoch(), False)
+        self.assertEqual(Agt._LastSeqIsFirstStep(), False)
         self.assertEqual(Agt._RetRewardOfLastSequenceStep(),-1)
 
         Agt.perceiveState([2,0],-1)
-        self.assertEqual(Agt._IsFirstStepOfEpoch(), False)
+        self.assertEqual(Agt._LastSeqIsFirstStep(), False)
         self.assertEqual(Agt._RetRewardOfLastSequenceStep(),-2)
 
         Agt.perceiveState([3,1],-1)
-        self.assertEqual(Agt._IsFirstStepOfEpoch(), True)
+        self.assertEqual(Agt._LastSeqIsFirstStep(), True)
         self.assertEqual(Agt._RetRewardOfLastSequenceStep(),0)
         self.assertEqual(Agt.SequenceRewards[-1],(2,-3,0,""))
 
         Agt.perceiveState([4,0],-1)
-        self.assertEqual(Agt._IsFirstStepOfEpoch(), False)
+        self.assertEqual(Agt._LastSeqIsFirstStep(), False)
         self.assertEqual(Agt._RetRewardOfLastSequenceStep(),-1)
 
         Agt.perceiveState([2,0],-1)
-        self.assertEqual(Agt._IsFirstStepOfEpoch(), False)
+        self.assertEqual(Agt._LastSeqIsFirstStep(), False)
         self.assertEqual(Agt._RetRewardOfLastSequenceStep(),-2)
 
     def test_SequenceRewards(self):

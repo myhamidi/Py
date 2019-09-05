@@ -33,7 +33,6 @@ class clsAgent:
         self.LastAction = ""
         self.LastActionType = "" #g,r (greedy, random)
         self.LastActionInt = -1
-        self.Q = []                 #QTable, Type: Table of RewStates rows x action cols
         self.QList = []          #Typ: List of QList represenation by features. Len = rows x cols from Q table.Lists [[],[],...]
         self.FeatureQ = []          #Typ: single col /List of Q valuse for QList
 
@@ -43,6 +42,10 @@ class clsAgent:
         random.shuffle(self.rand)
         self.randIdx = 0
 
+#####################################################################
+# Public                                                            #
+#####################################################################
+    
     def perceiveState(self, state, reward, learn = True):
         self._UpdateStates(state, reward)
         self._SequenceAppend(state, reward)
@@ -55,7 +58,7 @@ class clsAgent:
         self._SequenceTestAppend(state, reward)
 
     def nextAction(self,epsilon):
-        rand = self.pvNextRandInt()
+        rand = self._NextRandInt()
         if rand < epsilon: # Random
             self.LastActionType = "r"
             self.LastAction = random.choice(self.actions)
@@ -81,52 +84,15 @@ class clsAgent:
             for j in range(len(state.Q)):
                 state.Q[j] = round(state.Q[j],numdec)
 
-    def ImportQTable(self,FeatStates,Qpd):
-        #Check StateFeatures
-        assert len(self.actions) == len(Qpd[0]), "Q Table Cols != Number of actions. Numer of actions is: " + str(len(self.actions))
-        assert self.States == [], "self.States not empty"
-        assert self.Q == [], "Q Table not empty"
-
-        for i in range(len(FeatStates)):
-            for j in range(len(FeatStates[i])):
-                self.States.append(typState(features = FeatStates[i]))
-                self.Q.append([0]*len(self.actions))
-                # self.pvAppendNewState(typState("",FeatStates[i],0,0,0),FeatStates[i])
-        
-        for i in range(len(Qpd)):
-            for j in range(len(Qpd[i])):
-                self.Q[i][j] = Qpd[i][j]
-                #MOHI
-
-    def ImportQList(self,Qlist):
-        assert self.QList == [], "Q List not empty"
-        for i in range(len(Qlist)):
-            self.QList.append([])
-            for j in range(len(Qlist[i])):
-               self.QList[i].append(Qlist[i][j])
-
-    def Importcsv(self, path):
-        return pd.read_csv(path,skiprows = 0,
-                      na_values = "?", comment='\t',
-                      sep="|",skipinitialspace=True,error_bad_lines=False)
-
-    def resetSequenceRewards(self):
-        self.SequenceRewards = []
-
-    def resetSequenceRewardsTest(self):
-        self.SequenceRewardsTest = []
-
-    def reset(self):
-        self.States = [] 
-        self.Q = [] 
-        self.QList = []
-
     def setLearningParameter(self,alpha, gamma):
         self.alpha = alpha
         self.gamma = gamma
 
-#Private:
-    def pvNextRandInt(self):
+#####################################################################
+# Private                                                           #
+#####################################################################
+
+    def _NextRandInt(self):
         # Get Next Random Number from list
         self.randIdx +=1
         if self.randIdx == 1000: 
@@ -184,19 +150,27 @@ class clsAgent:
         if self.States[s].features[-1] == 0: # non terminal
             self.States[s].Q[a] = self.States[s].Q[a] + alpha*(r +gamma*max(self.States[s1].Q) - self.States[s].Q[a])
 
-    def printSequenceTest(self,textfile,xwr):
-        f = open(textfile,xwr)
-        
-        f.write("stateIndex|state|reward|actionIndex|greed\n")
-        for i in range(len(self.SequenceRewardsTest)):
-            s,r,a,ty = self.SequenceRewardsTest[i]
-            va = self.States[s].state
-            f.write(str(s) + "|" + str(va) + "|" + str(r) + "|" + str(a) + "|" + str(ty) + "\n")  
-
     def ping(self):
         print("Agent here")
 
-    def WriteQtoCSV(self, path, SplitCols = False):
+#####################################################################
+# IMPORT AND EXPORT                                                 #
+#####################################################################
+
+    def ImportQ(self,dataset_path, ):
+        self.States = []
+        QImport = pd.read_csv(dataset_path, skiprows = 0, na_values = "?", \
+        comment='\t', sep="|", skipinitialspace=True, error_bad_lines=False)
+
+        for col, _ in QImport.iterrows():
+            features = QImport.at[col, "State"].replace("[","").replace("]","").split(",")
+            Q = QImport.at[col, "Q"].replace("[","").replace("]","").split(",")
+            visited = QImport.at[col, "visited"]
+            for i in range(len(features)): features[i] = int(features[i])
+            for i in range(len(Q)): Q[i] = float(Q[i])
+            self.States.append(typState(features = features, Q = Q,visited = visited))
+
+    def ExportQtoCSV(self, path, SplitCols = False):
         self.RoundQ(2)
         Qpd = pd.DataFrame()
         Qpd["State"] = [state.features for state in self.States]
@@ -218,7 +192,7 @@ class clsAgent:
             # WRITE TO FILE:
             Qlistpd.to_csv(path, sep='|', encoding='utf-8', index = False)
 
-    def WriteSeqtoCSV(self, path, SplitCols = False):
+    def ExportSeqtoCSV(self, path, SplitCols = False):
         # Create full size data frame
         Seqpd = pd.DataFrame()
         Seqpd["actionInt"] = [step.actionInt for step in self.Sequence]
