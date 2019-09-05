@@ -53,10 +53,6 @@ class clsAgent:
 
         self.lastStep = self.Sequence[-1]
 
-    def getState(self, state, reward):
-        self._UpdateStates(state, 0)
-        self._SequenceTestAppend(state, reward)
-
     def nextAction(self,epsilon):
         rand = self._NextRandInt()
         if rand < epsilon: # Random
@@ -100,34 +96,13 @@ class clsAgent:
         return self.rand[self.randIdx]/1000
 
     def _SequenceAppend(self,featState,reward):
-        if len(self.Sequence) == 0 or self.Sequence[-1].statefeat[-1] == 1:
-            r = 0 
+        if len(self.Sequence) == 0 or self.Sequence[-1].statefeat[-1] == 1: 
+            totalrew_  = 0
         else:
-            r = self.Sequence[-1].totalreward
-        
+            totalrew_ = self.Sequence[-1].totalreward
+
         self.Sequence.append(typStep(actionInt = self.LastActionInt, action = self.LastAction, \
-            statefeatures = featState, reward = reward, totalreward = r + reward, rg = self.LastActionType))
-
-    def _RetRewardOfLastSequenceStep(self):
-        if self._LastSeqIsFirstStep(): 
-            return 0
-        else:
-            return self.lastStep.totalreward
-    
-    def _LastSeqIsFirstStep(self):
-        if len(self.Sequence) == 0:
-            return True
-        if len(self.Sequence) == 1:
-            return False                # tbd
-        if self.Sequence[-1].statefeat[-1] == 1:
-            return True
-        else:
-            return False
-
-    def _SequenceTestAppend(self, featState, reward):
-        idx = [state.features for state in self.States].index(featState)
-        r = self.lastStep.reward
-        self.SequenceRewardsTest.append((idx, round(r+reward,1), self.LastActionInt, self.LastActionType))
+            statefeatures = featState, reward = reward, totalreward = totalrew_ + reward, rg = self.LastActionType))
 
     def _UpdateStates(self,state, reward):
         for i in range(len(self.States)):

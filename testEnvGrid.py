@@ -45,7 +45,7 @@ def RunAgtOnGrid():
         assert Agt.States[i].features == TestAgt.States[i].features, str(Agt.States[i].features) + " is not " + str(TestAgt.States[i].features)
         assert Agt.States[i].Q == TestAgt.States[i].Q, str(Agt.States[i].Q) + " is not " + str(TestAgt.States[i].Q)
     
-    tmpState = []; c = 0; runs_test = 5;imax = 20;i=0 #2*(GZ-1);
+    tmpState = []; c = 0; runs_test = 10;imax = 20;i=0 #2*(GZ-1);
     Env.SetRandomStart()
     while c < runs_test and i < imax:
         TestAgt.perceiveState(Env.RetStateFeatures(), Env.RetReward(),learn = False)
