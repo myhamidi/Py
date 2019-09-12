@@ -95,10 +95,7 @@ class clsEnvironment:
         return False
 
     def Next(self,action):
-        if self.IsCurrentStateTerminal(): 
-            self.Reset()
-        else:
-            self.move(action)
+        self.move(action)
 
     def move(self,direction):
         tr.call("clsEnvironment.move")

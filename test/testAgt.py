@@ -38,10 +38,5 @@ class testAgt(unittest.TestCase):
         self.assertEqual(Agt.SequenceRewards[-2],(3,-1,0,""))
         self.assertEqual(Agt.SequenceRewards[-1],(1,-2,0,"")) # this state "1" has been seen before
 
-    def test_setModelTrainingParameter(self):
-        Agt.setModelTrainingParameter(batchsize=4)
-        Agt._GetNewSequenceSample()
-
-
 if __name__ == '__main__':
     unittest.main()

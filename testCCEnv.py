@@ -22,10 +22,10 @@ Env.setCar1_Accelerations([(0.01,a)])
 
 ### Train
 m = ""
-c=0; runs_train = 50000
+c=0; runs_train = 5000
 while c < runs_train:
     if Env.Cars[1].v > 1:
-        Agt.perceiveState(Env.RetStateFeatures(),Env.ReturnReward())
+        Agt.perceiveState(Env.RetStateFeatures(),Env.RetState(),Env.ReturnReward())
     if "terminal" in str(Env.RetState()):
         c+=1
         Env.Reset()
@@ -60,3 +60,4 @@ Agt.printQList("QList-CC.csv","w")
 ### Print Sequences of Run
 # Agt.printSequence100("SeqRews.csv","w")
 Agt.printSequenceTest("SeqTest-CC.csv","w")
+# Agt.printQ("Q.csv","w")
