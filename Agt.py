@@ -1,5 +1,6 @@
 import pathlib
 import pandas as pd
+import numpy as np
 import random
 
 import NN
@@ -39,26 +40,33 @@ class clsAgent:
         random.shuffle(self.rand)
         self.randIdx = 0
 
-        self.batchsize = 64
+        self.batchsize = 16
         self.SequenceSample = []
         self.SequenceSamplePD = pd.DataFrame()
+        # self.Model 
+        self.QSeqPD = pd.DataFrame()
+        self.logg = ""
 
 #####################################################################
 # Public                                                            #
 #####################################################################
     
-    def perceiveState(self, state, reward, learn = True, tabular = True):
+    def perceiveState(self, state, reward, learn = True, tabular = True, DQN = False):
         self._SequenceAppend(state, reward)
         self._UpdateNumTerminal()
 
         if tabular == True:
             self._UpdateStates(state, reward)
             self._UpdateQOfLastSequenceStep(self.alpha, self.gamma)
-        else:
-            if len(self.Sequence) > self.batchsize:
+        if DQN == True:
+            if len(self.Sequence) > self.batchsize*2 and len(self.Sequence) < self.batchsize*3:
                 self._NewSequenceSample()
-                self.SequenceSamplePD = self._ReturnPDFromSequence(self.SequenceSample)
-
+                self.SequenceSamplePD = self._ReturnPDFromSequence(self.SequenceSample, SplitState=True, SplitActions=True)
+                self._InitDQN(self.alpha,self.gamma)
+            if len(self.Sequence) > self.batchsize*3:
+                self._NewSequenceSample()
+                self.SequenceSamplePD = self._ReturnPDFromSequence(self.SequenceSample, SplitState=True, SplitActions=True)
+                self._UpdateDQN(self.alpha,self.gamma)
 
     def nextAction(self,epsilon = 0):
         if self.Sequence[-1].state1[-1] == 1:
@@ -104,6 +112,17 @@ class clsAgent:
     def setModelTrainingParameter(self, batchsize = 64, replaybuffer = 1e5):
         self.batchsize = batchsize
         self.buffer = replaybuffer
+
+    def modelInit(self, NumInput, NumLayers):
+        self.Model = NN.clsNN(NumInput, NumLayers)
+
+    def modelPredictQ(self,state):
+        return self.Model.predict(state)
+
+    def modelFit(self,X,y,TrainEpochs):
+        modelLoss = self.Model.fitt(X, y, TrainEpochs)
+        return modelLoss
+        
     # def SetModel(self, featurelist, NLayer = 1, Noutputs = 1):
     #     self.Model = NN.clsNN(len(featurelist)+len(self.actionlist), NLayer, Noutputs)
 
@@ -149,6 +168,52 @@ class clsAgent:
         alpha = max(1/self.States[s1].visited,self.alpha)
         if self.States[s].features[-1] == 0: # non terminal
             self.States[s].Q[a] = self.States[s].Q[a] + alpha*(r +gamma*max(self.States[s1].Q) - self.States[s].Q[a])
+    
+    def _InitDQN(self, alpha, gamma):
+        Xseq = self._ReturnColsByKeywords(self.SequenceSamplePD,["0feat","blaction"])
+        self.QSeqPD = self._ReturnColsByKeywords(self.SequenceSamplePD,["reward"])
+        loss = 2
+        while loss >1:
+            loss = self.modelFit(Xseq,self.QSeqPD,10)
+            print("loss:"+str(loss))
+    
+    def _UpdateDQN(self, alpha, gamma):
+        XAseq = self._ReturnColsByKeywords(self.SequenceSamplePD,["0feat","blaction"])
+        r = self._ReturnColsByKeywords(self.SequenceSamplePD,["reward"])
+        Xseq = self._ReturnColsByKeywords(self.SequenceSamplePD,["1feat"]).to_numpy()
+        q = self._ReturnQ(Xseq)
+        qmax = q.max(axis = 1)
+        self.QSeqPD = r + qmax
+        loss = self.modelFit(XAseq,self.QSeqPD,4)
+        # print("loss:"+str(loss))
+
+    def _ReturnQ(self, statesnp):
+        # states = statesnp.tolist()
+        arr =[]; act = []; tmp = []
+        for i in range(len(self.actions)):
+            a = np.copy(statesnp).tolist()
+            arr.append(a)
+
+        for i in range(len(self.actions)):
+            tmp = []
+            for j in range(len(self.actions)):
+                if i == j:
+                    tmp.append(1)
+                else:
+                    tmp.append(0)
+            act.append(tmp)
+    # 'MOHI'
+        for i in range(len(arr)):
+            for j in range(len(arr[i])):
+                arr[i][j] += act[i] 
+        
+        arrT = list(map(list, zip(*arr)));qarr = []
+        for inp in arrT:
+            qnp = self.modelPredictQ(np.array(inp)).tolist()
+            qarr.append(qnp)
+
+        return np.array(qarr)
+
 
     def _UpdateNumTerminal(self):
         if len(self.Sequence) > 0:
@@ -189,15 +254,20 @@ class clsAgent:
         sample["action"] = [step.action for step in Sequence]
         sample["1state"] = [step.state1 for step in Sequence]
         sample["reward"] = [step.reward for step in Sequence]
-        sample["tot reward"] = [step.totalreward for step in Sequence]
+        sample["totrew"] = [step.totalreward for step in Sequence]
         sample["rnd_grd"] = [step.rg for step in Sequence]
         return sample
 
     def _NewSequenceSample(self):
         idx = list(range(len(self.Sequence)-1)); random.shuffle(idx)
-        self.SequenceSample = []
-        for i in range(self.batchsize):
-            self.SequenceSample.append(self.Sequence[idx[i]])
+        self.SequenceSample = []; c = 0; i = 0
+        while c < self.batchsize:
+            if self.Sequence[idx[i]].state0 == [0]:
+                i +=1
+            else:
+                self.SequenceSample.append(self.Sequence[idx[i]])
+                i +=1;c += 1
+
 
     def _ReturnColsByKeywords(self, dataframe, keywords):
         tmp = pd.DataFrame({})
@@ -266,7 +336,7 @@ class clsAgent:
         
         Seqpd["state1"] = [step.state1 for step in self.Sequence]
         Seqpd["reward"] = [step.reward for step in self.Sequence]
-        Seqpd["tot reward"] = [step.totalreward for step in self.Sequence]
+        Seqpd["totrew"] = [step.totalreward for step in self.Sequence]
         Seqpd["rnd_grd"] = [step.rg for step in self.Sequence]
 
         #Create 100evenly distributed indices from 0 to n terminal states-> arr

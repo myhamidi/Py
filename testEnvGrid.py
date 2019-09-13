@@ -5,6 +5,7 @@ import Render
 ### Parameter:
 GZx = 10
 GZy = 10
+runs = 3000 # N training runs
 
 ### Init
 Env = EnvGrid.clsEnvironment(GZx,GZy,-1)
@@ -22,20 +23,20 @@ def RunAgtOnGrid():
     Env.SetStartPosition((int(GZx/2),int(GZy/2)))
     Agt.setLearningParameter(0.2,1)
 
-    ### Train
-    c = 0; runs_train = 3000
-    while c < runs_train:
-        Agt.perceiveState(Env.RetStateFeatures(), Env.RetReward())
-        if Env.IsCurrentStateTerminal():
-            c+=1
-            Env.Reset()
-        eps = 1-c/runs_train
-        Env.Next(Agt.nextAction(eps))
-        if c%100 == 0:print("Train Step: " + str(c),end ='\r')
+    Agt.modelInit(6,1)
 
+    ### Train
+    while Agt.Nterminal < runs:
+        Agt.perceiveState(Env.RetStateFeatures(), Env.RetReward(), DQN=True)
+        Env.Next(Agt.nextAction(epsilon=1-Agt.Nterminal/runs))
+        Agt.EchoPrint(10, "train ")
+        
     Agt.SortStates()
-    Agt.ExportQtoCSV("csv/Q-EnvGrid.csv")
-    Agt.ExportQtoCSV("csv/QList-EnvGrid.csv", SplitCols=True)
+    Agt.RoundQ(1)
+
+    # Export results
+    # Agt.ExportQtoCSV("csv/Q-EnvGrid.csv")
+    # Agt.ExportQtoCSV("csv/QList-EnvGrid.csv", SplitCols=True)
     Agt.ExportSeqtoCSV("csv/Seq-EnvGrid.csv",SplitCols=True)
 
     ### Test
@@ -55,7 +56,7 @@ def RunAgtOnGrid():
         tmpState = Env.RetState()
         if Env.IsCurrentStateTerminal():
             tmpState = []; c+=1;i=0
-            Env.Reset()
+            # Env.Reset()
             Env.SetRandomStart()
         eps = 0
         Env.Next(TestAgt.nextAction(eps))
