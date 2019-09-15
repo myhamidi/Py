@@ -25,10 +25,11 @@ class typStep:
 
 class clsAgent:
 #Public:
-    def __init__(self, actionlist):
+    def __init__(self, actionlist, featurelist = []):
         self.States = []         #Typ: typState. Remembers all (unique) states visited.
         self.Sequence = []
         self.actions = actionlist
+        self.featurelist = featurelist
         self.LastAction = ""
         self.LastActionType = "" #g,r (greedy, random)
         self.LastActionInt = -1
@@ -41,10 +42,14 @@ class clsAgent:
         self.randIdx = 0
 
         self.batchsize = 16
-        self.SequenceSample = []
+        self.SequenceSampleLIST = []
+        self.SequenceSampleLISTXA = []
+        self.SequenceSampleLISTX = []
+        self.SequenceSampleTYP = []
         self.SequenceSamplePD = pd.DataFrame()
         # self.Model 
         self.QSeqPD = pd.DataFrame()
+        self.QSeqNP = np.array([])
         self.logg = ""
 
 #####################################################################
@@ -58,15 +63,9 @@ class clsAgent:
         if tabular == True:
             self._UpdateStates(state, reward)
             self._UpdateQOfLastSequenceStep(self.alpha, self.gamma)
-        if DQN == True:
-            if len(self.Sequence) > self.batchsize*2 and len(self.Sequence) < self.batchsize*3:
-                self._NewSequenceSample()
-                self.SequenceSamplePD = self._ReturnPDFromSequence(self.SequenceSample, SplitState=True, SplitActions=True)
-                self._InitDQN(self.alpha,self.gamma)
-            if len(self.Sequence) > self.batchsize*3:
-                self._NewSequenceSample()
-                self.SequenceSamplePD = self._ReturnPDFromSequence(self.SequenceSample, SplitState=True, SplitActions=True)
-                self._UpdateDQN(self.alpha,self.gamma)
+        if DQN == True and len(self.Sequence) > self.batchsize*2:
+            self._NewSequenceSample()
+            self._UpdateDQN(self.alpha,self.gamma)
 
     def nextAction(self,epsilon = 0):
         if self.Sequence[-1].state1[-1] == 1:
@@ -169,113 +168,90 @@ class clsAgent:
         if self.States[s].features[-1] == 0: # non terminal
             self.States[s].Q[a] = self.States[s].Q[a] + alpha*(r +gamma*max(self.States[s1].Q) - self.States[s].Q[a])
     
-    def _InitDQN(self, alpha, gamma):
-        Xseq = self._ReturnColsByKeywords(self.SequenceSamplePD,["0feat","blaction"])
-        self.QSeqPD = self._ReturnColsByKeywords(self.SequenceSamplePD,["reward"])
-        loss = 2
-        while loss >1:
-            loss = self.modelFit(Xseq,self.QSeqPD,10)
-            print("loss:"+str(loss))
-    
     def _UpdateDQN(self, alpha, gamma):
-        XAseq = self._ReturnColsByKeywords(self.SequenceSamplePD,["0feat","blaction"])
-        r = self._ReturnColsByKeywords(self.SequenceSamplePD,["reward"])
-        Xseq = self._ReturnColsByKeywords(self.SequenceSamplePD,["1feat"]).to_numpy()
-        q = self._ReturnQ(Xseq)
-        qmax = q.max(axis = 1)
-        self.QSeqPD = r + qmax
-        loss = self.modelFit(XAseq,self.QSeqPD,4)
-        # print("loss:"+str(loss))
+        X = np.array(self.SequenceSampleLISTXA) # state and actions
+        r = np.array(self.SequenceSampleLIST)[:,4] # reward
+        if len(self.Sequence) < self.batchsize*3:  
+            NewQTarget = r # init model with rewards
+        else:
+            q = np.array(self._ReturnQs(self.SequenceSampleLISTX))
+            qmax = q.max(axis = 1)[:,0]  # without [:,0] shape would be (16,1)
+            NewQTarget = r + qmax
+        loss = self.modelFit(X,NewQTarget,1)
 
-    def _ReturnQ(self, statesnp):
-        # states = statesnp.tolist()
-        arr =[]; act = []; tmp = []
+    def _ReturnQs(self, states):
+        stateCopy =[]
         for i in range(len(self.actions)):
-            a = np.copy(statesnp).tolist()
-            arr.append(a)
-
+            # arr.append(np.copy(states).tolist())  -> check perfomance
+            stateCopy.append([[feature for feature in state] for state in states]) # hard copy
+        act010 = []
         for i in range(len(self.actions)):
-            tmp = []
-            for j in range(len(self.actions)):
-                if i == j:
-                    tmp.append(1)
-                else:
-                    tmp.append(0)
-            act.append(tmp)
-    # 'MOHI'
-        for i in range(len(arr)):
-            for j in range(len(arr[i])):
-                arr[i][j] += act[i] 
-        
-        arrT = list(map(list, zip(*arr)));qarr = []
-        for inp in arrT:
-            qnp = self.modelPredictQ(np.array(inp)).tolist()
-            qarr.append(qnp)
+            act010.append([1 if i == j else 0 for j in range(len(self.actions))])
 
-        return np.array(qarr)
+        for i in range(len(stateCopy)):
+            for j in range(len(stateCopy[i])):
+                stateCopy[i][j] += act010[i] 
+        stateCopyT = [[stateCopy[j][i] for j in range(len(stateCopy))] for i in range(len(stateCopy[0]))]
 
+        qarr = []
+        for stateaction in stateCopyT:
+                qnp = self.modelPredictQ(np.array(stateaction)).tolist()
+                qarr.append(qnp)
+        # ttt = [[qarr[j][i] for j in range(len(qarr))] for i in range(len(qarr[0]))]
+        return qarr
+
+    def _Return01ChainFromInt(self, n, nmax):
+        tmp =[]
+        for i in range(nmax):
+            if i == n:
+                tmp.append(1)
+            else:
+                tmp.append(0)
+        return tmp
 
     def _UpdateNumTerminal(self):
         if len(self.Sequence) > 0:
             if self.Sequence[-1].state1[-1] == 1: 
                 self.Nterminal +=1
 
-    def _ReturnPDFromSequence(self, Sequence, SplitState = False, SplitActions = False):
-        sample = self._ReturnPandasFromSequence(Sequence)
-        
-        if SplitState == True:
-            sample["0state"] = [str(step.state0).replace("[","").replace("]","") for step in Sequence]
-            new = sample["0state"].str.split(",", expand = True).astype('float')
-            for i in range(len(new.columns)-1):
-                sample["0feat"+str(i)] = new[i]
-            sample["0terminal"]= new[len(new.columns)-1]
-
-        if SplitActions == True:
-            for i in range(len(self.actions)):
-                sample["blaction"+str(i)] = 0
-            for index, row in sample.iterrows():
-                for i in range(len(self.actions)):
-                    if row["actionInt"] == i: 
-                        sample.at[index, "blaction"+str(i)] = 1
-
-        if SplitState == True:
-            sample["1state"] = [str(step.state1).replace("[","").replace("]","") for step in Sequence]
-            new = sample["1state"].str.split(",", expand = True).astype('float')
-            for i in range(len(new.columns)-1):
-                sample["1feat"+str(i)] = new[i]
-            sample["1terminal"]= new[len(new.columns)-1]
-
-        return sample
-
-    def _ReturnPandasFromSequence(self,Sequence):
-        sample = pd.DataFrame()
-        sample["0state"] = [step.state0 for step in Sequence]
-        sample["actionInt"] = [step.actionInt for step in Sequence]
-        sample["action"] = [step.action for step in Sequence]
-        sample["1state"] = [step.state1 for step in Sequence]
-        sample["reward"] = [step.reward for step in Sequence]
-        sample["totrew"] = [step.totalreward for step in Sequence]
-        sample["rnd_grd"] = [step.rg for step in Sequence]
-        return sample
-
     def _NewSequenceSample(self):
+        self.NewSequenceSampleTYP()
+        self._ParseSequenceStepsToList()
+        self._ParseSequenceSampleToListXXA()
+
+    def NewSequenceSampleTYP(self):
+        self.SequenceSampleTYP = []
         idx = list(range(len(self.Sequence)-1)); random.shuffle(idx)
-        self.SequenceSample = []; c = 0; i = 0
+        c = 0; i = 0
         while c < self.batchsize:
-            if self.Sequence[idx[i]].state0 == [0]:
-                i +=1
-            else:
-                self.SequenceSample.append(self.Sequence[idx[i]])
-                i +=1;c += 1
+            if not self.Sequence[idx[i]].state0 == [0]: #skip fist steps of epoch
+                self.SequenceSampleTYP.append(self.Sequence[idx[i]])
+                c += 1
+            i +=1     
+    
+    def _ParseSequenceStepsToList(self):
+        self.SequenceSampleLIST = []; sample = []
+        sample.append([step.state0 for step in self.SequenceSampleTYP])
+        sample.append([step.actionInt for step in self.SequenceSampleTYP])
+        sample.append([step.action for step in self.SequenceSampleTYP])
+        sample.append([step.state1 for step in self.SequenceSampleTYP])
+        sample.append([step.reward for step in self.SequenceSampleTYP])
+        sample.append([step.totalreward for step in self.SequenceSampleTYP])
+        sample.append([step.rg for step in self.SequenceSampleTYP])
+        self.SequenceSampleLIST = list(map(list, zip(*sample)))
 
-
-    def _ReturnColsByKeywords(self, dataframe, keywords):
-        tmp = pd.DataFrame({})
-        for col in dataframe.columns:
-            for keyword in keywords:
-                if col.find(keyword)>-1:
-                    tmp[col] = dataframe[col]
-        return tmp
+    def _ParseSequenceSampleToListXXA(self):
+        self.SequenceSampleLISTX = []; sampleX = []
+        self.SequenceSampleLISTXA = []; sampleXA = []
+        for step in self.SequenceSampleTYP:
+            tmp = []
+            for i in range(len(self.featurelist)-1): # exclude terminal state
+                tmp.append(step.state0[i])
+            sampleX.append(list(tmp))
+            tmp += self._Return01ChainFromInt(step.actionInt, len(self.actions))
+            sampleXA.append(list(tmp))
+        self.SequenceSampleLISTX = sampleX
+        self.SequenceSampleLISTXA = sampleXA   
 
     def ping(self):
         print("Agent here")
