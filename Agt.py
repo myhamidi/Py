@@ -6,15 +6,16 @@ import random
 import NN
 
 class typState:
-    def __init__(self, features = [] , reward = 0.0, Q = [], value= 0.0 , visited = 0):
+    def __init__(self, features = [] , reward = 0.0, Q = [], Qapx = [], value= 0.0 , visited = 0):
         self.features = features
         self.reward = reward
         self.Q = Q
+        self.Qapx = Qapx
         self.value = value 
         self.visited = visited
 
 class typStep:
-    def __init__(self, state0 = [0], state1 = [0] , reward = 0.0, totalreward = 0.0, Q = [], actionInt = -1, action = "", rg = "r"):
+    def __init__(self, state0 = [0], state1 = [0] , reward = 0.0, totalreward = 0.0, actionInt = -1, action = "", rg = "r"):
         self.state0 = state0
         self.state1 = state1
         self.reward = reward
@@ -65,7 +66,9 @@ class clsAgent:
             self._UpdateQOfLastSequenceStep(self.alpha, self.gamma)
         if DQN == True and len(self.Sequence) > self.batchsize*2:
             self._NewSequenceSample()
-            self._UpdateDQN(self.alpha,self.gamma)
+            self._UpdateDQN()
+            self._NewSequenceSample(tonly=True)
+            self._UpdateDQN()
 
     def nextAction(self,epsilon = 0):
         if self.Sequence[-1].state1[-1] == 1:
@@ -82,7 +85,7 @@ class clsAgent:
         else: # Greedy (x-case epsilon == 0)
             self.LastActionType = "g"
             statefeatures = [state.features for state in self.States]
-            s = statefeatures.index(self.Sequence[-1].state1)
+            s = statefeatures.index(self.Sequence[-1].state0)
             self.LastActionInt = self.States[s].Q.index(max(self.States[s].Q))
             self.LastAction = self.actions[self.LastActionInt]     
         return self.LastAction
@@ -95,10 +98,19 @@ class clsAgent:
                 if self.States[j].features > self.States[j+1].features:
                     self.States[j], self.States[j+1] = self.States[j+1], self.States[j]
 
+    def QapxToStates(self):
+        for state in self.States:
+            f0 = np.array([state.features[i] for i in range(len(self.featurelist)-1)])
+            features = np.expand_dims(f0, axis= 0)
+            qs = self._ReturnQs(features)[0]
+            state.Qapx = [q[0] for q in qs]
+        return
+
     def RoundQ(self, numdec):
         for state in self.States:
             for j in range(len(state.Q)):
                 state.Q[j] = round(state.Q[j],numdec)
+                state.Qapx[j] = round(state.Qapx[j],numdec)
 
     def EchoPrint(self,afterNSteps = 10, prefix = ""):
         if self.Nterminal%afterNSteps == 0:
@@ -137,15 +149,22 @@ class clsAgent:
         return self.rand[self.randIdx]/1000
 
     def _SequenceAppend(self,featState,reward):#MOHI
-        if len(self.Sequence) == 0 or self.Sequence[-1].state1[-1] == 1: 
-            totalrew_  = 0
-            state0 = [0]
-        else:
-            totalrew_ = self.Sequence[-1].totalreward
-            state0 = self.Sequence[-1].state1
+        if len(self.Sequence) == 0: 
+            self.Sequence.append(typStep(state0 = featState, reward = reward, totalreward = reward))
+            return
 
-        self.Sequence.append(typStep(state0 = state0, actionInt = self.LastActionInt, action = self.LastAction, \
-            state1 = featState, reward = reward, totalreward = totalrew_ + reward, rg = self.LastActionType))
+        if self.Sequence[-1].state0[-1] == 0: 
+            self.Sequence[-1].state1 = featState
+            self.Sequence[-1].actionInt = self.LastActionInt
+            self.Sequence[-1].action = self.LastAction
+            self.Sequence[-1].rg = self.LastActionType
+
+            self.Sequence.append(typStep(state0 = featState, reward = reward, totalreward = self.Sequence[-1].totalreward + reward))
+        else: 
+            self.Sequence.append(typStep(state0 = featState, reward = reward, totalreward = reward))
+
+        # self.Sequence.append(typStep(state0 = state0, actionInt = self.LastActionInt, action = self.LastAction, \
+        #     state1 = featState, reward = reward, totalreward = totalrew_ + reward, rg = self.LastActionType))
 
     def _UpdateStates(self,state, reward):
         for i in range(len(self.States)):
@@ -157,27 +176,35 @@ class clsAgent:
         self.States[-1].visited +=1
     
     def _UpdateQOfLastSequenceStep(self, alpha, gamma):
-        if len(self.Sequence)<3: 
+        if len(self.Sequence)<3:
             return
-        state1 = self.Sequence[-1].state1; s1 = [state.features for state in self.States].index(state1)
-        state = self.Sequence[-2].state1; s = [state.features for state in self.States].index(state)
-        r = self.Sequence[-1].reward
-        a = self.Sequence[-1].actionInt
+        if self.Sequence[-2].state0[-1] == 1: # empty step (from terminal to nowhere)
+            return
+        state0 = self.Sequence[-2].state0; s0 = [state.features for state in self.States].index(state0)
+        state1 = self.Sequence[-2].state1; s1 = [state.features for state in self.States].index(state1)
+        r = self.Sequence[-2].reward
+        a = self.Sequence[-2].actionInt
 
-        alpha = max(1/self.States[s1].visited,self.alpha)
-        if self.States[s].features[-1] == 0: # non terminal
-            self.States[s].Q[a] = self.States[s].Q[a] + alpha*(r +gamma*max(self.States[s1].Q) - self.States[s].Q[a])
+        alpha = max(1/self.States[s0].visited,self.alpha)
+        if self.States[s0].features[-1] == 0: # non terminal
+            self.States[s0].Q[a] = self.States[s0].Q[a] + alpha*(r +gamma*max(self.States[s1].Q) - self.States[s0].Q[a])
     
-    def _UpdateDQN(self, alpha, gamma):
+    def _UpdateDQN(self):
         X = np.array(self.SequenceSampleLISTXA) # state and actions
         r = np.array(self.SequenceSampleLIST)[:,4] # reward
+        X_ = np.array(self.SequenceSampleLISTX_) # follow up state
+        qmax = np.array(self._ReturnQs(X_)).max(axis = 1)[:,0]
+
         if len(self.Sequence) < self.batchsize*3:  
             NewQTarget = r # init model with rewards
+            ftg = 10 
         else:
-            q = np.array(self._ReturnQs(self.SequenceSampleLISTX))
-            qmax = q.max(axis = 1)[:,0]  # without [:,0] shape would be (16,1)
+            # qmax = np.array(self._ReturnQs(X_)).max(axis = 1)[:,0]  # without [:,0] shape would be (16,1)
             NewQTarget = r + qmax
-        loss = self.modelFit(X,NewQTarget,1)
+            ftg = 4
+        loss = self.modelFit(X,NewQTarget,ftg)
+        # MOHI: Fit to terminal states every step. NewTarget = r, no qmax and therefore no error guessing
+        return
 
     def _ReturnQs(self, states):
         stateCopy =[]
@@ -211,11 +238,11 @@ class clsAgent:
 
     def _UpdateNumTerminal(self):
         if len(self.Sequence) > 0:
-            if self.Sequence[-1].state1[-1] == 1: 
+            if self.Sequence[-1].state0[-1] == 1: 
                 self.Nterminal +=1
 
-    def _NewSequenceSample(self):
-        self.NewSequenceSampleTYP()
+    def _NewSequenceSample(self, tonly = False):
+        self.NewSequenceSampleTYP() if tonly == False else self.NewSequenceTerminalSampleTYP()
         self._ParseSequenceStepsToList()
         self._ParseSequenceSampleToListXXA()
 
@@ -227,7 +254,15 @@ class clsAgent:
             if not self.Sequence[idx[i]].state0 == [0]: #skip fist steps of epoch
                 self.SequenceSampleTYP.append(self.Sequence[idx[i]])
                 c += 1
-            i +=1     
+            i +=1
+        return
+
+    def NewSequenceTerminalSampleTYP(self):
+        self.SequenceSampleTYP = []
+        for step in self.Sequence:
+            if step.state1[-1] == 1 and len(self.SequenceSampleTYP) < self.batchsize:
+                self.SequenceSampleTYP.append(step)
+        return
     
     def _ParseSequenceStepsToList(self):
         self.SequenceSampleLIST = []; sample = []
@@ -241,16 +276,21 @@ class clsAgent:
         self.SequenceSampleLIST = list(map(list, zip(*sample)))
 
     def _ParseSequenceSampleToListXXA(self):
-        self.SequenceSampleLISTX = []; sampleX = []
+        self.SequenceSampleLISTX_ = []; sampleX_ = []
+        for step in self.SequenceSampleTYP:
+            tmp_ = []
+            for i in range(len(self.featurelist)-1): # exclude terminal state
+                tmp_.append(step.state1[i])
+            sampleX_.append(list(tmp_))
+        self.SequenceSampleLISTX_ = sampleX_
+
         self.SequenceSampleLISTXA = []; sampleXA = []
         for step in self.SequenceSampleTYP:
             tmp = []
             for i in range(len(self.featurelist)-1): # exclude terminal state
                 tmp.append(step.state0[i])
-            sampleX.append(list(tmp))
             tmp += self._Return01ChainFromInt(step.actionInt, len(self.actions))
             sampleXA.append(list(tmp))
-        self.SequenceSampleLISTX = sampleX
         self.SequenceSampleLISTXA = sampleXA   
 
     def ping(self):
@@ -273,11 +313,12 @@ class clsAgent:
             for i in range(len(Q)): Q[i] = float(Q[i])
             self.States.append(typState(features = features, Q = Q,visited = visited))
 
-    def ExportQtoCSV(self, path, SplitCols = False):
+    def ExportQtoCSV(self, path, SplitCols = False, colQapx = False):
         self.RoundQ(2)
         Qpd = pd.DataFrame()
         Qpd["State"] = [state.features for state in self.States]
         Qpd["Q"] = [state.Q for state in self.States]
+        Qpd["Qapx"] = [state.Qapx for state in self.States]
         Qpd["visited"] = [state.visited for state in self.States]
         if SplitCols == False:
             # WRITE TO FILE:
@@ -337,4 +378,12 @@ class clsAgent:
 
         # WRITE TO FILE:
         Seq100pd.to_csv(path, sep='|', encoding='utf-8', index = False)
+
+    def ExportWeights(self,path):
+        wpd = pd.DataFrame()
+        a = self.Model.RetWeights()
+        for i in range(len(a)):
+            wpd["Layer "+ str(i)] = [layer[0].tolist() for layer in a]
+            wpd["bias "+ str(i)] = [layer[1].tolist() for layer in a]
+        wpd.to_csv(path, sep='|', encoding='utf-8', index = False)
       
