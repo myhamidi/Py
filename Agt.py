@@ -23,12 +23,14 @@ class typStep:
         self.actionInt = actionInt
         self.action = action
         self.rg = rg
+        self.sampled = 0
 
 class clsAgent:
 #Public:
     def __init__(self, actionlist, featurelist = []):
         self.States = []         #Typ: typState. Remembers all (unique) states visited.
         self.Sequence = []
+        self.TerminalRewards = []       # idx, reward
         self.actions = actionlist
         self.featurelist = featurelist
         self.LastAction = ""
@@ -42,7 +44,7 @@ class clsAgent:
         random.shuffle(self.rand)
         self.randIdx = 0
 
-        self.batchsize = 16
+        self.batchsize = 4
         self.SequenceSampleLIST = []
         self.SequenceSampleLISTXA = []
         self.SequenceSampleLISTX = []
@@ -67,11 +69,12 @@ class clsAgent:
         if DQN == True and len(self.Sequence) > self.batchsize*2:
             self._NewSequenceSample()
             self._UpdateDQN()
-            self._NewSequenceSample(tonly=True)
-            self._UpdateDQN()
+            # if self.Nterminal > 1:
+            #     self._NewSequenceSample(tonly=True)
+            #     self._UpdateDQN()
 
     def nextAction(self,epsilon = 0):
-        if self.Sequence[-1].state1[-1] == 1:
+        if self.Sequence[-1].state0[-1] == 1:
             self.LastActionType = ""
             self.LastAction = ""
             self.LastActionInt = -1
@@ -124,8 +127,8 @@ class clsAgent:
         self.batchsize = batchsize
         self.buffer = replaybuffer
 
-    def modelInit(self, NumInput, NumLayers):
-        self.Model = NN.clsNN(NumInput, NumLayers)
+    def modelInit(self, NumInput, NumLayers, act = 'ReLu'):
+        self.Model = NN.clsNN(NumInput, NumLayers,ActFunction=act)
 
     def modelPredictQ(self,state):
         return self.Model.predict(state)
@@ -162,6 +165,7 @@ class clsAgent:
             self.Sequence.append(typStep(state0 = featState, reward = reward, totalreward = self.Sequence[-1].totalreward + reward))
         else: 
             self.Sequence.append(typStep(state0 = featState, reward = reward, totalreward = reward))
+            self.TerminalRewards.append([self.Sequence[-2].state0[:-1],self.Sequence[-2].reward])
 
         # self.Sequence.append(typStep(state0 = state0, actionInt = self.LastActionInt, action = self.LastAction, \
         #     state1 = featState, reward = reward, totalreward = totalrew_ + reward, rg = self.LastActionType))
@@ -193,17 +197,27 @@ class clsAgent:
         X = np.array(self.SequenceSampleLISTXA) # state and actions
         r = np.array(self.SequenceSampleLIST)[:,4] # reward
         X_ = np.array(self.SequenceSampleLISTX_) # follow up state
-        qmax = np.array(self._ReturnQs(X_)).max(axis = 1)[:,0]
+        X_t = list([])
+        for state in X_:
+            if state[-1] == 1:
+                X_t.append([0]*(len(self.featurelist)-1))  
+            else: 
+                X_t.append([state[i] for i in range(len(self.featurelist)-1)])
+
+        qmax = np.array(self._ReturnQs(X_t)).max(axis = 1)[:,0]
+        for i in range(len(X_)):
+            if X_[i][-1] == 1:
+                for terrews in self.TerminalRewards:
+                    if terrews[0] == X_[i][:-1].tolist(): 
+                        qmax[i] = terrews[1]
 
         if len(self.Sequence) < self.batchsize*3:  
             NewQTarget = r # init model with rewards
             ftg = 10 
         else:
-            # qmax = np.array(self._ReturnQs(X_)).max(axis = 1)[:,0]  # without [:,0] shape would be (16,1)
             NewQTarget = r + qmax
-            ftg = 4
+            ftg = 1
         loss = self.modelFit(X,NewQTarget,ftg)
-        # MOHI: Fit to terminal states every step. NewTarget = r, no qmax and therefore no error guessing
         return
 
     def _ReturnQs(self, states):
@@ -251,8 +265,9 @@ class clsAgent:
         idx = list(range(len(self.Sequence)-1)); random.shuffle(idx)
         c = 0; i = 0
         while c < self.batchsize:
-            if not self.Sequence[idx[i]].state0 == [0]: #skip fist steps of epoch
+            if not self.Sequence[idx[i]].state1 == [0]: #skip epmty steps (from terminal to nowhere)
                 self.SequenceSampleTYP.append(self.Sequence[idx[i]])
+                self.Sequence[idx[i]].sampled += 1
                 c += 1
             i +=1
         return
@@ -262,6 +277,7 @@ class clsAgent:
         for step in self.Sequence:
             if step.state1[-1] == 1 and len(self.SequenceSampleTYP) < self.batchsize:
                 self.SequenceSampleTYP.append(step)
+                step.sampled += 1
         return
     
     def _ParseSequenceStepsToList(self):
@@ -278,11 +294,16 @@ class clsAgent:
     def _ParseSequenceSampleToListXXA(self):
         self.SequenceSampleLISTX_ = []; sampleX_ = []
         for step in self.SequenceSampleTYP:
-            tmp_ = []
-            for i in range(len(self.featurelist)-1): # exclude terminal state
-                tmp_.append(step.state1[i])
-            sampleX_.append(list(tmp_))
-        self.SequenceSampleLISTX_ = sampleX_
+            self.SequenceSampleLISTX_.append(step.state1)
+            
+        #     if step.state1[-1] == 1:
+        #         sampleX_.append(step.state1)
+        #     else:
+        #         tmp_ = []
+        #         for i in range(len(self.featurelist)-1): # exclude terminal state in state representation
+        #             tmp_.append(step.state1[i])
+        #         sampleX_.append(list(tmp_))
+        # self.SequenceSampleLISTX_ = sampleX_
 
         self.SequenceSampleLISTXA = []; sampleXA = []
         for step in self.SequenceSampleTYP:
@@ -355,11 +376,12 @@ class clsAgent:
         Seqpd["reward"] = [step.reward for step in self.Sequence]
         Seqpd["totrew"] = [step.totalreward for step in self.Sequence]
         Seqpd["rnd_grd"] = [step.rg for step in self.Sequence]
+        Seqpd["sampled"] = [step.sampled for step in self.Sequence]
 
         #Create 100evenly distributed indices from 0 to n terminal states-> arr
         arr0 = []; arr1 = []; arrTerminal = []
         for i in range(len(self.Sequence)):
-            if self.Sequence[i].state1[-1] == 1:
+            if self.Sequence[i].state0[-1] == 1:
                 arrTerminal.append(i)
         for i in range(99): 
             idx = int(i * len(arrTerminal)/99)
