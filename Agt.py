@@ -32,6 +32,7 @@ class clsAgent:
         self.Sequence = []
         self.TerminalRewards = []       # idx, reward
         self.actions = actionlist
+        self.actionsConstrains = actionlist
         self.featurelist = featurelist
         self.LastAction = ""
         self.LastActionType = "" #g,r (greedy, random)
@@ -44,7 +45,7 @@ class clsAgent:
         random.shuffle(self.rand)
         self.randIdx = 0
 
-        self.batchsize = 4
+        self.batchsize = 0
         self.SequenceSampleLIST = []
         self.SequenceSampleLISTXA = []
         self.SequenceSampleLISTX = []
@@ -65,9 +66,10 @@ class clsAgent:
 
         if tabular == True:
             self._UpdateStates(state, reward)
-            self._UpdateQOfLastSequenceStep(self.alpha, self.gamma)
-        if DQN == True and len(self.Sequence) > self.batchsize*2:
+            # self._UpdateQOfSequenceStepN(self.alpha, self.gamma,-2)
+        if DQN == True and len(self.Sequence) > self.batchsize*5:
             self._NewSequenceSample()
+            # self._UpdateQOfSample(self.alpha, self.gamma)
             self._UpdateDQN()
             # if self.Nterminal > 1:
             #     self._NewSequenceSample(tonly=True)
@@ -83,7 +85,7 @@ class clsAgent:
         rand = self._NextRandInt()
         if rand < epsilon: # Random (x-case epsilon == 1)
             self.LastActionType = "r"
-            self.LastAction = random.choice(self.actions)
+            self.LastAction = random.choice(self.actionsConstrains)
             self.LastActionInt =self.actions.index(self.LastAction)
         else: # Greedy (x-case epsilon == 0)
             self.LastActionType = "g"
@@ -136,6 +138,18 @@ class clsAgent:
     def modelFit(self,X,y,TrainEpochs):
         modelLoss = self.Model.fitt(X, y, TrainEpochs)
         return modelLoss
+
+    def SetActionConstrains(self, reducedActionList = [], forbiddenActions = []):
+        assert reducedActionList== [] and not forbiddenActions == [] or forbiddenActions == [] and not reducedActionList == [], \
+        "Choose only one constraint configuration"
+        self.actionsConstrains = []
+        if not reducedActionList == []:
+            self.actionsConstrains = reducedActionList
+        if not forbiddenActions == []:
+            for action in self.actions:
+                self.actionsConstrains.append(action)
+            for action in forbiddenActions:
+                self.actionsConstrains.remove(action) 
         
     # def SetModel(self, featurelist, NLayer = 1, Noutputs = 1):
     #     self.Model = NN.clsNN(len(featurelist)+len(self.actionlist), NLayer, Noutputs)
@@ -179,19 +193,34 @@ class clsAgent:
         self.States[-1].Q = [0]*len(self.actions)
         self.States[-1].visited +=1
     
-    def _UpdateQOfLastSequenceStep(self, alpha, gamma):
-        if len(self.Sequence)<3:
+    def _UpdateQOfSequenceStepN(self, alpha, gamma, NSeqIndex):
+        if len(self.Sequence)< -1*NSeqIndex+1:
             return
-        if self.Sequence[-2].state0[-1] == 1: # empty step (from terminal to nowhere)
+        if self.Sequence[NSeqIndex].state0[-1] == 1: # empty step (from terminal to nowhere)
             return
-        state0 = self.Sequence[-2].state0; s0 = [state.features for state in self.States].index(state0)
-        state1 = self.Sequence[-2].state1; s1 = [state.features for state in self.States].index(state1)
-        r = self.Sequence[-2].reward
-        a = self.Sequence[-2].actionInt
+        state0 = self.Sequence[NSeqIndex].state0; s0 = [state.features for state in self.States].index(state0)
+        state1 = self.Sequence[NSeqIndex].state1; s1 = [state.features for state in self.States].index(state1)
+        r = self.Sequence[NSeqIndex].reward
+        a = self.Sequence[NSeqIndex].actionInt
 
         alpha = max(1/self.States[s0].visited,self.alpha)
         if self.States[s0].features[-1] == 0: # non terminal
             self.States[s0].Q[a] = self.States[s0].Q[a] + alpha*(r +gamma*max(self.States[s1].Q) - self.States[s0].Q[a])
+    
+    def _UpdateQOfSample(self, alpha, gamma):
+        X = np.array(self.SequenceSampleLISTX) # state and actions
+        R = np.array(self.SequenceSampleLIST)[:,4] # reward
+        A = np.array(self.SequenceSampleLIST)[:,1] # action
+        X_ = np.array(self.SequenceSampleLISTX_) # follow up state
+
+        for i in range(len(X)):
+            s0 = [state.features for state in self.States].index(X[i].tolist())
+            s1 = [state.features for state in self.States].index(X_[i].tolist())
+            a = A[i]
+            r = R[i]
+            alpha = max(1/self.States[s0].visited,self.alpha)
+            if self.States[s0].features[-1] == 0: # non terminal
+                self.States[s0].Q[a] = self.States[s0].Q[a] + alpha*(r +gamma*max(self.States[s1].Q) - self.States[s0].Q[a])
     
     def _UpdateDQN(self):
         X = np.array(self.SequenceSampleLISTXA) # state and actions
@@ -260,14 +289,14 @@ class clsAgent:
         self._ParseSequenceStepsToList()
         self._ParseSequenceSampleToListXXA()
 
-    def NewSequenceSampleTYP(self):
+    def NewSequenceSampleTYP(self,buffer=100):
         self.SequenceSampleTYP = []
-        idx = list(range(len(self.Sequence)-1)); random.shuffle(idx)
+        idx = list(range(self.batchsize*3)); random.shuffle(idx)
         c = 0; i = 0
         while c < self.batchsize:
-            if not self.Sequence[idx[i]].state1 == [0]: #skip epmty steps (from terminal to nowhere)
-                self.SequenceSampleTYP.append(self.Sequence[idx[i]])
-                self.Sequence[idx[i]].sampled += 1
+            if not self.Sequence[-1*idx[i]].state1 == [0]: #skip epmty steps (from terminal to nowhere)
+                self.SequenceSampleTYP.append(self.Sequence[-1*idx[i]])
+                self.Sequence[-1*idx[i]].sampled += 1
                 c += 1
             i +=1
         return
@@ -292,19 +321,14 @@ class clsAgent:
         self.SequenceSampleLIST = list(map(list, zip(*sample)))
 
     def _ParseSequenceSampleToListXXA(self):
-        self.SequenceSampleLISTX_ = []; sampleX_ = []
+        self.SequenceSampleLISTX = [] 
+        for step in self.SequenceSampleTYP:
+            self.SequenceSampleLISTX.append(step.state0)
+        
+        self.SequenceSampleLISTX_ = []
         for step in self.SequenceSampleTYP:
             self.SequenceSampleLISTX_.append(step.state1)
-            
-        #     if step.state1[-1] == 1:
-        #         sampleX_.append(step.state1)
-        #     else:
-        #         tmp_ = []
-        #         for i in range(len(self.featurelist)-1): # exclude terminal state in state representation
-        #             tmp_.append(step.state1[i])
-        #         sampleX_.append(list(tmp_))
-        # self.SequenceSampleLISTX_ = sampleX_
-
+    
         self.SequenceSampleLISTXA = []; sampleXA = []
         for step in self.SequenceSampleTYP:
             tmp = []
@@ -357,7 +381,8 @@ class clsAgent:
             # WRITE TO FILE:
             Qlistpd.to_csv(path, sep='|', encoding='utf-8', index = False)
 
-    def ExportSeqtoCSV(self, path, SplitCols = False):
+    def ExportSeqtoCSV(self, path, SplitCols = False, nthEpoch = 100):
+        nthEpoch = nthEpoch-1
         # Create full size data frame
         Seqpd = pd.DataFrame()
         Seqpd["state0"] = [step.state0 for step in self.Sequence]
@@ -383,23 +408,26 @@ class clsAgent:
         for i in range(len(self.Sequence)):
             if self.Sequence[i].state0[-1] == 1:
                 arrTerminal.append(i)
-        for i in range(99): 
-            idx = int(i * len(arrTerminal)/99)
-            arr0.append(arrTerminal[idx])
-            arr1.append(arrTerminal[idx+1])
-        
-        #Mark all lines between index arr[i] - arr[i+1]
-        Seqpd["mark"] = 0
-        for i in range(99):
-            for j in range(arr0[i]+1, arr1[i]+1):
-                Seqpd.at[j, "mark"] = 1
-        
-        # Filter data frame
-        Seq100pd =  Seqpd[Seqpd["mark"] == 1]
-        Seq100pd = Seq100pd.drop(columns = ["mark"])
+        if len(arrTerminal) > nthEpoch:
+            for i in range(nthEpoch): 
+                idx = int(i * len(arrTerminal)/nthEpoch)
+                arr0.append(arrTerminal[idx])
+                arr1.append(arrTerminal[idx+1])
 
-        # WRITE TO FILE:
-        Seq100pd.to_csv(path, sep='|', encoding='utf-8', index = False)
+            #Mark all lines between index arr[i] - arr[i+1]
+            Seqpd["mark"] = 0
+            for i in range(nthEpoch):
+                for j in range(arr0[i]+1, arr1[i]+1):
+                    Seqpd.at[j, "mark"] = 1
+                
+            # Filter data frame
+            Seq100pd =  Seqpd[Seqpd["mark"] == 1]
+            Seq100pd = Seq100pd.drop(columns = ["mark"])
+
+            # WRITE TO FILE:
+            Seq100pd.to_csv(path, sep='|', encoding='utf-8', index = False)
+        else:
+            Seqpd.to_csv(path, sep='|', encoding='utf-8', index = False)
 
     def ExportWeights(self,path):
         wpd = pd.DataFrame()
