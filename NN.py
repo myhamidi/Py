@@ -6,9 +6,10 @@ from tensorflow import keras
 from tensorflow.keras import layers
 
 class clsNN:
-    def __init__(self, NumInput, NumLayers, NumOutputs = 1, NeuronsEachLayer = 8, ActFunction = 'relu'):
+    def __init__(self, NumInput, NumLayers, NumOutputs = 1, NeuronsEachLayer = 8, ActFunction = 'relu',learning_rate = 0.001):
       self.model = keras.Sequential()
       self.modelLoss = 0
+      self.lr = learning_rate
       
       if NumLayers == 0:
         self.model.add(layers.Dense(NumOutputs, input_shape=(NumInput,), activation='linear'))
@@ -20,6 +21,7 @@ class clsNN:
           self.model.add(layers.Dense(NumOutputs, activation='linear'))
         
       self.model.compile(optimizer='adam', loss='mean_squared_error')
+      keras.optimizers.Adam(learning_rate=self.lr, beta_1=0.9, beta_2=0.999, amsgrad=False)
       
     def fitt(self,X,y,TrainEpochs):
       self.logg = self.model.fit(X, y, verbose=0, validation_split=0, epochs=TrainEpochs)
@@ -36,6 +38,9 @@ class clsNN:
       return self.modelLoss
     
     def predict(self, x):
+      assert len(x.shape) >0, "x has not the right shape. len(x.shape) should be >0"
+      if len(x.shape) == 1:
+        x = np.expand_dims(x, axis= 0)
       return self.model.predict(x)
     
     def predictQmax(self,x,nactions):
@@ -76,3 +81,6 @@ class clsNN:
         if abs(PredictedTarget[i]-Target["Q"][i]) > MaxDelta:
           errPredictions.loc[len(errPredictions)] = [i, X.iloc[i,0], PredictedTarget[i], Target["Q"][i]]
       return errPredictions
+
+    def SetParameter(self,learning_rate= 0.001):
+      self.lr = learning_rate
