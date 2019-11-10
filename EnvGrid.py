@@ -19,6 +19,7 @@ class clsEnvironment:
         self.limit_rows = rows
         self.step = 0
         self.run = 0
+        self.features = ["x","y","terminal"]
         self.actions = ["up","down","left","right"]
         if rows == 1:
             self.actions = ["left","right"]
@@ -116,6 +117,9 @@ class clsEnvironment:
     def ReturnActionList(self):
         tr.call("clsEnv.returnActionList")
         return self.actions
+    
+    def ReturnFeatureList(self):
+        return self.features
 
     def Reset(self):
         self.step = 0

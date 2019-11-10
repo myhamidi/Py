@@ -44,6 +44,8 @@ class clsAgent:
         self.rand = list(range(1000))
         random.shuffle(self.rand)
         self.randIdx = 0
+        self.FitAfterNStatePerceptions = 10
+        self.FitStepsCounter = 0
 
         self.batchsize = 0
         self.SequenceSampleLIST = []
@@ -66,11 +68,14 @@ class clsAgent:
 
         if tabular == True:
             self._UpdateStates(state, reward)
-            # self._UpdateQOfSequenceStepN(self.alpha, self.gamma,-2)
+            self._UpdateQOfSequenceStepN(self.alpha, self.gamma,-2)
         if DQN == True and len(self.Sequence) > self.batchsize*5:
-            self._NewSequenceSample()
+            self.FitStepsCounter +=1
+            if self.FitStepsCounter ==self.FitAfterNStatePerceptions:
+                self.FitStepsCounter = 0
+                self._NewSequenceSample()
             # self._UpdateQOfSample(self.alpha, self.gamma)
-            self._UpdateDQN()
+                self._UpdateDQN()
             # if self.Nterminal > 1:
             #     self._NewSequenceSample(tonly=True)
             #     self._UpdateDQN()
@@ -129,8 +134,8 @@ class clsAgent:
         self.batchsize = batchsize
         self.buffer = replaybuffer
 
-    def modelInit(self, NumInput, NumLayers, act = 'ReLu'):
-        self.Model = NN.clsNN(NumInput, NumLayers,ActFunction=act)
+    def modelInit(self, NumInput, NumLayers, act = 'ReLu', NeuronshiddenLayer = 16):
+        self.Model = NN.clsNN(NumInput, NumLayers,ActFunction=act, NeuronsEachLayer=NeuronshiddenLayer)
 
     def modelPredictQ(self,state):
         return self.Model.predict(state)
@@ -138,6 +143,11 @@ class clsAgent:
     def modelFit(self,X,y,TrainEpochs):
         modelLoss = self.Model.fitt(X, y, TrainEpochs)
         return modelLoss
+
+    def modelSetParameter(self,Agtlearning_rate = 0.001, FitAfterNStatePerceptions = 10):
+        self.Model.SetParameter(learning_rate=Agtlearning_rate)
+        self.FitAfterNStatePerceptions = FitAfterNStatePerceptions
+
 
     def SetActionConstrains(self, reducedActionList = [], forbiddenActions = []):
         assert reducedActionList== [] and not forbiddenActions == [] or forbiddenActions == [] and not reducedActionList == [], \
@@ -242,32 +252,33 @@ class clsAgent:
 
         if len(self.Sequence) < self.batchsize*3:  
             NewQTarget = r # init model with rewards
-            ftg = 10 
+            ftg = 100 
         else:
             NewQTarget = r + qmax
-            ftg = 1
+            ftg = 10
         loss = self.modelFit(X,NewQTarget,ftg)
         return
 
     def _ReturnQs(self, states):
-        stateCopy =[]
+        CopyStates =[]
         for i in range(len(self.actions)):
-            # arr.append(np.copy(states).tolist())  -> check perfomance
-            stateCopy.append([[feature for feature in state] for state in states]) # hard copy
-        act010 = []
+            # double loop to access single list item -> creates Nactions times a real Copy instead of reference
+            # expands dims:dim(CopyStates) = dim(states)+1, where first represents n-th action
+            CopyStates.append([[feature for feature in state] for state in states])
+        ActionsAsNxN010 = []
         for i in range(len(self.actions)):
-            act010.append([1 if i == j else 0 for j in range(len(self.actions))])
+            ActionsAsNxN010.append([1 if i == j else 0 for j in range(len(self.actions))])
 
-        for i in range(len(stateCopy)):
-            for j in range(len(stateCopy[i])):
-                stateCopy[i][j] += act010[i] 
-        stateCopyT = [[stateCopy[j][i] for j in range(len(stateCopy))] for i in range(len(stateCopy[0]))]
+        for i in range(len(CopyStates)): 
+            for j in range(len(CopyStates[i])):
+                CopyStates[i][j] += ActionsAsNxN010[i] 
+        CopyStatesTranspose = [[CopyStates[j][i] for j in range(len(CopyStates))] for i in range(len(CopyStates[0]))]
 
         qarr = []
-        for stateaction in stateCopyT:
-                qnp = self.modelPredictQ(np.array(stateaction)).tolist()
-                qarr.append(qnp)
-        # ttt = [[qarr[j][i] for j in range(len(qarr))] for i in range(len(qarr[0]))]
+        for stateaction in CopyStatesTranspose:
+            # stateaction = [[state,1,0,0],[state,0,1,0],[state,0,0,1]]
+            qActions = self.modelPredictQ(np.array(stateaction)).tolist()
+            qarr.append(qActions)
         return qarr
 
     def _Return01ChainFromInt(self, n, nmax):

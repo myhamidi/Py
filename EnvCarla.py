@@ -36,6 +36,7 @@ class clsCarlaEnv:
         self.wp_listRoute = []          # route (str) the waypoint belongs to
         self.sensor = ""                # carla.Sensor (carla.Actor)
         self.actor_wpLog = []           # [leaving waypoint, heading waypoint]
+        self.actor_speed = 0
         
         self.TargetRoute = ""
 
@@ -45,8 +46,8 @@ class clsCarlaEnv:
         self.actors_speed = 0
 
         # Environment Representation
-        self.actions = ["gas","brake"]
-        self.features = ["Ego v", "Forward d", "Forward v"]
+        self.actions = ["gas","brake", "keepspeed"]
+        self.features = ["Ego v", "Forward d", "Forward v", "terminal"]
         self.terminal = 0
         self.terminalPerceived = False
 
@@ -78,9 +79,12 @@ class clsCarlaEnv:
             self.ApplyGas(0,1)
         if action == self.actions[1]:
             self.ApplyBrake(0,1)
+        if action == self.actions[1]:
+            self.keepSpeed(0)
         self.TickAfterTimeStep(timestep)
         self.UpdateActorTransformToWaypointDrive(ShowHeadingPoint = True)
-        self.RefreshAutopilotSpeed()
+        if len(self.actor_list) > 1:
+            self.RefreshAutopilotSpeed()
     
     def ReturnActionList(self):
         return self.actions
@@ -88,18 +92,23 @@ class clsCarlaEnv:
     def ReturnFeatureList(self):
         return self.features    
 
-    def RetStateFeatures(self, actorN = 0):
+    def RetStateFeatures(self, actorN = 0, runden = 4):
         t = self.terminal
         if t == 1:
             self.terminalPerceived = True
-        return [self.RetActorSpeed(actorN), self.RetActorFront(actorN,[0,50])[0], \
+        return [round(self.RetActorSpeed(actorN),runden), self.RetActorFront(actorN,[0,50])[0], \
             self.RetActorFront(actorN,[0,50])[1], t]
 
-    def RetReward(self,actorN = 0, timestep = 0.05):
-        v = (self.RetLenVec(self.actor_list[actorN].get_velocity())-2)*timestep
-        ret = v
-        ret += math.fabs(1/(3.5-self.RetActorFront(actorN,[0,50])[0]))*(1/(3.5-self.RetActorFront(actorN,[0,50])[0]))*10
-        return ret*10
+    def RetReward(self,actorN = 0, timestep = 0.05,runden = 4):
+        # v Soll = 72 km/h
+        v = (self.RetLenVec(self.actor_list[actorN].get_velocity()))
+        ret = self._RetRewardNegDelta(20,v)
+        # ret += math.fabs(1/(3.5-self.RetActorFront(actorN,[0,50])[0]))*(1/(3.5-self.RetActorFront(actorN,[0,50])[0]))*10
+        return round(ret,runden)
+
+    def _RetRewardNegDelta(self, Ist, Soll):
+        return -1*math.fabs(Ist-Soll)
+
 
 # ==============================================================================
 # -- Actor functions ----------------------------------------------------------
@@ -158,6 +167,7 @@ class clsCarlaEnv:
     def SetActorVelocity(self,actorN,v = 0):
         vecForward = self.actor_list[actorN].get_transform().get_forward_vector()
         self.actor_list[actorN].set_velocity(carla.Vector3D(x=vecForward.x*v,y=vecForward.y*v,z=0))
+        self.actor_speed = v
 
     def RetActorSpeed (self,actorN, includeZ = False):
         return self.RetLenVec(self.actor_list[actorN].get_velocity(), includeZ=includeZ)
@@ -263,10 +273,13 @@ class clsCarlaEnv:
             self.SetActorTransform(0,ActorTransform, self.wp_list[self.actor_wpLog[actorN][1]].transform, ShowHeadingPoint=ShowHeadingPoint)
             
     def ApplyGas(self,actorN, deltaV):
-        self.SetActorVelocity(actorN,v = self.RetActorSpeed(actorN)+deltaV)
+        self.SetActorVelocity(actorN,v = self.actor_speed+deltaV)
 
     def ApplyBrake(self,actorN, deltaV):
-        self.SetActorVelocity(actorN,v = self.RetActorSpeed(actorN)-deltaV)
+        self.SetActorVelocity(actorN,v = self.actor_speed-deltaV)
+
+    def keepSpeed(self,actorN):
+        self.SetActorVelocity(actorN,v = self.actor_speed)
 
 # ==============================================================================
 # -- Debug functions ----------------------------------------------------------
@@ -350,6 +363,8 @@ class clsCarlaEnv:
         while tstamp-t1 < timestep:
             self.world.tick()
             tstamp = self.world.wait_for_tick().elapsed_seconds
+        self.UpdateActorTransformToWaypointDrive(0)
+        self.SetActorVelocity(0,self.actor_speed)
         return
 
     def Tick(self):

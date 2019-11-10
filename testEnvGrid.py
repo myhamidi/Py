@@ -2,10 +2,13 @@ import EnvGrid
 import Agt as Ag
 import Render
 
+import tensorflow as tf
+# from tf_agents.agents.dqn import dqn_agent
+
 ### Parameter:
 GZx = 10
 GZy = 10
-runs = 100 # N training runs
+runs = 1000  # N training runs
 
 ### Init
 Env = EnvGrid.clsEnvironment(GZx,GZy,-1)
@@ -16,26 +19,44 @@ def AgtImport():
     Agt.ImportQ("csv/Q-EnvGrid.csv")
 
 def RunAgtOnGrid():
-    
     ### Config
     Env.SetTerminalState((0,0)); Env.SetRewardAtState((0,0),0)
     Env.SetTerminalState((GZx-1,GZy-1)); Env.SetRewardAtState((GZx-1,GZy-1),0)
     Env.SetStartPosition((int(GZx/2),int(GZy/2)))
     Agt.setLearningParameter(0.2,1)
-
-    Agt.modelInit(6,1)
+    Agt.setModelTrainingParameter(batchsize=32)
+    # Agt.SetActionConstrains(forbiddenActions=["right"])
+    inn = len(Env.ReturnActionList()) + len(Env.ReturnFeatureList())-1
+    Agt.modelInit(inn,2,act= 'relu',NeuronshiddenLayer=64)
+    Agt.modelSetParameter(Agtlearning_rate=0.01)
 
     ### Train
     while Agt.Nterminal < runs:
-        Agt.perceiveState(Env.RetStateFeatures(), Env.RetReward(), DQN=True)
+        state = Env.RetStateFeatures()
+        reward = Env.RetReward()
+        Agt.perceiveState(state, Env.RetReward(), DQN=True)
+        forbact = []
+        if Agt.LastAction == "left" or state[1] == GZy-1:
+            forbact.append("right")
+        if Agt.LastAction == "right" or state[1] == 0:
+            forbact.append("left")
+        if Agt.LastAction == "up" or state[0] == GZx-1:
+            forbact.append("down")
+        if Agt.LastAction == "down" or state[0] == 0:
+            forbact.append("up")
+        # if not forbact == []:
+        #     Agt.SetActionConstrains(forbiddenActions=forbact)
         Env.Next(Agt.nextAction(epsilon=1-Agt.Nterminal/runs))
         Agt.EchoPrint(1, "train ")
         
+        
     Agt.SortStates()
+    Agt.QapxToStates()
     Agt.RoundQ(1)
+    Agt.ExportWeights("csv/w.csv")
 
     # Export results
-    # Agt.ExportQtoCSV("csv/Q-EnvGrid.csv")
+    Agt.ExportQtoCSV("csv/Q-EnvGrid.csv")
     # Agt.ExportQtoCSV("csv/QList-EnvGrid.csv", SplitCols=True)
     Agt.ExportSeqtoCSV("csv/Seq-EnvGrid.csv",SplitCols=True)
 
