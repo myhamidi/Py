@@ -16,7 +16,7 @@ class clsNN:
       else:
         self.model.add(layers.Dense(NeuronsEachLayer, input_shape=(NumInput,), activation=ActFunction))
         if NumLayers > 0:
-          for _ in range(NumLayers):
+          for _ in range(1,NumLayers):
             self.model.add(layers.Dense(NeuronsEachLayer, activation=ActFunction))  
           self.model.add(layers.Dense(NumOutputs, activation='linear'))
         

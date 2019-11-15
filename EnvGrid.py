@@ -46,22 +46,18 @@ class clsEnvironment:
         self.currentposition = (r,c)
 
     def SetTerminalState(self,pos):
-        tr.call("clsEnv.setTerminalState")
         row, col = pos
         self.EnvStates[row][col].terminal = True
 
     def SetRewardAtState(self,pos,Reward):
-        tr.call("clsEnv.setRewardAtState")
         row, col = pos
         self.EnvStates[row][col].reward = Reward
 
     def RetReward(self):
-        tr.call("clsEnv.RetReward")
         x,y = self.currentposition
         return self.EnvStates[x][y].reward
 
     def RetState(self):
-        tr.call("clsEnv.RetState")
         if self.IsCurrentStateTerminal() == True:
             self.run += 1
             return str(self.currentposition) + "terminal1"

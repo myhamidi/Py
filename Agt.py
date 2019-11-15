@@ -2,6 +2,9 @@ import pathlib
 import pandas as pd
 import numpy as np
 import random
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.metrics import mean_squared_error
+
 
 import NN
 
@@ -39,6 +42,7 @@ class clsAgent:
         self.LastActionInt = -1
         self.Nterminal = 0
 
+        self.loss = 0
         self.alpha = .2
         self.gamma = 1
         self.rand = list(range(1000))
@@ -62,20 +66,20 @@ class clsAgent:
 # Public                                                            #
 #####################################################################
     
-    def perceiveState(self, state, reward, learn = True, tabular = True, DQN = False):
+    def perceiveState(self, state, reward, learn = True, tabular = True, DQN = False, DQNTrainSteps=10):
         self._SequenceAppend(state, reward)
         self._UpdateNumTerminal()
 
         if tabular == True:
             self._UpdateStates(state, reward)
             self._UpdateQOfSequenceStepN(self.alpha, self.gamma,-2)
-        if DQN == True and len(self.Sequence) > self.batchsize*5:
+        if DQN == True and len(self.Sequence) > self.batchsize*10:
             self.FitStepsCounter +=1
             if self.FitStepsCounter ==self.FitAfterNStatePerceptions:
                 self.FitStepsCounter = 0
                 self._NewSequenceSample()
             # self._UpdateQOfSample(self.alpha, self.gamma)
-                self._UpdateDQN()
+                self._UpdateDQN(TrainSteps= DQNTrainSteps)
             # if self.Nterminal > 1:
             #     self._NewSequenceSample(tonly=True)
             #     self._UpdateDQN()
@@ -114,6 +118,10 @@ class clsAgent:
             features = np.expand_dims(f0, axis= 0)
             qs = self._ReturnQs(features)[0]
             state.Qapx = [q[0] for q in qs]
+            # if type(qs[0]) == list:
+            #     state.Qapx = [q[0] for q in qs]
+            # else:
+            #     state.Qapx = [q for q in qs]
         return
 
     def RoundQ(self, numdec):
@@ -130,19 +138,34 @@ class clsAgent:
         self.alpha = alpha
         self.gamma = gamma
 
-    def setModelTrainingParameter(self, batchsize = 64, replaybuffer = 1e5):
+    def setModelTrainingParameter(self, batchsize = 16, replaybuffer = 1e5):
         self.batchsize = batchsize
         self.buffer = replaybuffer
 
-    def modelInit(self, NumInput, NumLayers, act = 'ReLu', NeuronshiddenLayer = 16):
+    def modelInit(self, NumInput, NumLayers, act = 'ReLu', NeuronshiddenLayer = 16, TreeMaxDepth = 30):
         self.Model = NN.clsNN(NumInput, NumLayers,ActFunction=act, NeuronsEachLayer=NeuronshiddenLayer)
+        # self.ModelTree = DecisionTreeRegressor(max_depth=TreeMaxDepth)
+        # X = np.array([[0]*(len(self.actions)+len(self.featurelist)-1)]*3)
+        # Y = np.array([[0],[0],[0]])
+        # self.modelTreeFit(X,Y)
 
     def modelPredictQ(self,state):
         return self.Model.predict(state)
+    
+    # def modelTreePredictQ(self,state):
+    #     return self.ModelTree.predict(state)
 
     def modelFit(self,X,y,TrainEpochs):
         modelLoss = self.Model.fitt(X, y, TrainEpochs)
         return modelLoss
+
+    # def modelTreeFit(self,X,y,fitrate = 1):
+    #     if fitrate == 1:
+    #         self.ModelTree.fit(X, y)
+    #         return mean_squared_error(y, self.ModelTree.predict(X))
+    #     else:
+    #         y_target = self.ModelTree.predict(X) + fitrate*(y - self.ModelTree.predict(X))
+    #         self.ModelTree.fit(X, y_target)
 
     def modelSetParameter(self,Agtlearning_rate = 0.001, FitAfterNStatePerceptions = 10):
         self.Model.SetParameter(learning_rate=Agtlearning_rate)
@@ -232,31 +255,31 @@ class clsAgent:
             if self.States[s0].features[-1] == 0: # non terminal
                 self.States[s0].Q[a] = self.States[s0].Q[a] + alpha*(r +gamma*max(self.States[s1].Q) - self.States[s0].Q[a])
     
-    def _UpdateDQN(self):
+    def _UpdateDQN(self,TrainSteps=10):
         X = np.array(self.SequenceSampleLISTXA) # state and actions
         r = np.array(self.SequenceSampleLIST)[:,4] # reward
         X_ = np.array(self.SequenceSampleLISTX_) # follow up state
         X_t = list([])
         for state in X_:
+            # if len(state) == 1: # case terminal
             if state[-1] == 1:
                 X_t.append([0]*(len(self.featurelist)-1))  
             else: 
                 X_t.append([state[i] for i in range(len(self.featurelist)-1)])
 
         qmax = np.array(self._ReturnQs(X_t)).max(axis = 1)[:,0]
+
         for i in range(len(X_)):
             if X_[i][-1] == 1:
                 for terrews in self.TerminalRewards:
-                    if terrews[0] == X_[i][:-1].tolist(): 
+                    if str(terrews[0]) == str(X_[i][:-1]): 
                         qmax[i] = terrews[1]
 
-        if len(self.Sequence) < self.batchsize*3:  
-            NewQTarget = r # init model with rewards
-            ftg = 100 
+        if len(self.Sequence) < self.batchsize*10+1:  
+            NewQTarget = r # init model with rewards 
         else:
             NewQTarget = r + qmax
-            ftg = 10
-        loss = self.modelFit(X,NewQTarget,ftg)
+        loss = self.modelFit(X,NewQTarget,TrainSteps)
         return
 
     def _ReturnQs(self, states):
@@ -278,8 +301,12 @@ class clsAgent:
         for stateaction in CopyStatesTranspose:
             # stateaction = [[state,1,0,0],[state,0,1,0],[state,0,0,1]]
             qActions = self.modelPredictQ(np.array(stateaction)).tolist()
+            # qActions = self.modelTreePredictQ(np.array(stateaction)).tolist()
             qarr.append(qActions)
         return qarr
+        # if len(qarr) == 1:
+        #     return qarr
+        # return np.expand_dims(qarr, axis= 1)   # return arr for DQN
 
     def _Return01ChainFromInt(self, n, nmax):
         tmp =[]
@@ -300,9 +327,9 @@ class clsAgent:
         self._ParseSequenceStepsToList()
         self._ParseSequenceSampleToListXXA()
 
-    def NewSequenceSampleTYP(self,buffer=100):
+    def NewSequenceSampleTYP(self):
         self.SequenceSampleTYP = []
-        idx = list(range(self.batchsize*3)); random.shuffle(idx)
+        idx = list(range(self.batchsize*10)); random.shuffle(idx)
         c = 0; i = 0
         while c < self.batchsize:
             if not self.Sequence[-1*idx[i]].state1 == [0]: #skip epmty steps (from terminal to nowhere)
@@ -310,6 +337,9 @@ class clsAgent:
                 self.Sequence[-1*idx[i]].sampled += 1
                 c += 1
             i +=1
+            # self.SequenceSampleTYP.append(self.Sequence[-1*idx[c]])
+            # self.Sequence[-1*idx[c]].sampled += 1
+            # c += 1
         return
 
     def NewSequenceTerminalSampleTYP(self):
@@ -330,6 +360,8 @@ class clsAgent:
         sample.append([step.totalreward for step in self.SequenceSampleTYP])
         sample.append([step.rg for step in self.SequenceSampleTYP])
         self.SequenceSampleLIST = list(map(list, zip(*sample)))
+
+        return
 
     def _ParseSequenceSampleToListXXA(self):
         self.SequenceSampleLISTX = [] 
@@ -444,7 +476,6 @@ class clsAgent:
         wpd = pd.DataFrame()
         a = self.Model.RetWeights()
         for i in range(len(a)):
-            wpd["Layer "+ str(i)] = [layer[0].tolist() for layer in a]
-            wpd["bias "+ str(i)] = [layer[1].tolist() for layer in a]
+            wpd["Layer "+ str(i)] = a[i]
         wpd.to_csv(path, sep='|', encoding='utf-8', index = False)
       
