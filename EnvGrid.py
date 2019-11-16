@@ -114,7 +114,6 @@ class clsEnvironment:
         self.step = 0
         self.run = self.run+1
         self.currentposition = self.start
-        
 
 # ==============================================================================
 # -- Verification --------------------------------------------------------------
@@ -126,9 +125,9 @@ class clsEnvironment:
             for j in range(len(self.EnvStates[i])):
                 if self.EnvStates[i][j].terminal == True:
                     tStates.append([self.EnvStates[i][j].x,self.EnvStates[i][j].y])
-        assert len(tStates)==1 and str(tStates)== '[[0, 0]]',str(tStates)
+        assert len(tStates)==1,str(tStates)
 
-        self._setqValuesToEnvStates()
+        self._setqValuesToEnvStates(tStates)
         gtStates = []
         for i in range(len(self.EnvStates)):
             for j in range(len(self.EnvStates[i])):
@@ -137,16 +136,31 @@ class clsEnvironment:
                     , self.EnvStates[i][j].q])
         return gtStates
     
-    def _setqValuesToEnvStates(self):
+    def _setqValuesToEnvStates(self,terminals):
         for i in range(self.limit_rows):
             for j in range(self.limit_cols):
                 reward = self.EnvStates[i][j].reward
-                q = float((i+j)*reward)
-                qup = q if i > 0 else q+reward
-                qdown = q+2*reward if i < self.limit_rows-1 else q+reward
-                qleft = q if j > 0 else q+reward
-                qright = q+2*reward if j < self.limit_cols-1 else q+reward
-                if i == 0 and j == 0:
+                dx = terminals[0][0]-i
+                dy = terminals[0][1]-j
+                q = float((abs(dx)+abs(dy))*reward)
+                #ego bottomright
+                if dx <= 0 and dy <= 0:
+                    qup = q ; qleft = q; qdown = q+2*reward;qright = q+2*reward
+                #ego bottomleft
+                if dx > 0 and dy < 0:
+                    qup = q ; qright = q; qdown = q+2*reward; qleft = q+2*reward
+                #ego topright
+                if dx < 0 and dy > 0:
+                    qdown = q ; qleft = q; qup = q+2*reward; qright = q+2*reward
+                #ego topleft
+                if dx >= 0 and dy >= 0:
+                    qdown = q ; qright = q; qup = q+2*reward; qleft = q+2*reward
+                #if ego on edge
+                if i == 0: qup = q+reward
+                if j == 0: qleft = q+reward
+                if i == self.limit_cols-1: qdown = q+reward
+                if j == self.limit_rows-1: qright = q+reward
+                if i == terminals[0][0] and j == terminals[0][1]:
                     self.EnvStates[i][j].q = [0.0,0.0,0.0,0.0]
                 else:
                     self.EnvStates[i][j].q = [qup,qdown,qleft,qright]
