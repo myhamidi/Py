@@ -9,12 +9,19 @@ class typGridState:
         self.q = []             # used for verification only
     
 class clsEnvironment:
-    def __init__(self,rows,cols,reward):
-        self.EnvStates = [[typGridState(i,j,reward,False) for j in range(cols)] for i in range(rows)]
-        self.currentposition = (0,0)
-        self.start = (0,0)
+    def __init__(self,rows,cols,reward, parameters = []):
         self.limit_cols = cols
         self.limit_rows = rows
+        self.ireward = reward
+        if not parameters == []:
+            assert len(parameters)==3, "Error! Length of Parameters!"
+            self.limit_cols = parameters[0]
+            self.limit_rows = parameters[1]
+            self.ireward = parameters[2]
+        self.EnvStates = [[typGridState(i,j,self.ireward,False) for j in range(cols)] for i in range(rows)]
+        self.currentposition = (0,0)
+        self.start = (0,0)
+
         self.step = 0
         self.run = 0
         self.features = ["x","y","terminal"]
@@ -84,9 +91,9 @@ class clsEnvironment:
         return False
 
     def Next(self,action):
-        if action == "":
-            self.move(random.choice(self.actions))
-            return
+        # if action == "":
+        #     self.move(random.choice(self.actions))
+        #     return
         if self.IsCurrentStateTerminal(): 
             self.Reset()
         else:
@@ -95,14 +102,16 @@ class clsEnvironment:
     def move(self,direction):
         self.step = self.step +1
         r,c = self.currentposition
-        if direction == "left" and c >0:
+        if direction == "left" and 0 < c:
             self.currentposition = (r,c-1)
         elif direction == "right"and c < self.limit_cols-1:
             self.currentposition =(r,c+1)
-        elif direction == "up" and r >0:
+        elif direction == "up" and 0 < r:
             self.currentposition = (r-1,c)
         elif direction == "down" and r < self.limit_rows-1:
             self.currentposition = (r+1,c)
+        elif direction == "":
+            self.currentposition = (r,c)
 
     def ReturnActionList(self):
         return self.actions
