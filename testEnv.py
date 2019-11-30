@@ -1,5 +1,4 @@
 import Env
-
 # ==============================================================================
 # -- Test Init -----------------------------------------------------------------
 # ==============================================================================   
@@ -7,6 +6,23 @@ import Env
 #Test1
 Env = Env.clsEnv("Grid",[10,10,-1]) 
 retStr = "Rows: 10"+"\n";retStr += "Cols: 10"+"\n";retStr +="Initial Reward: -1"
-assert Env.Info() == retStr, retStr
+assert Env.Info() == retStr, "Test1 failed"
 
-print(Env.Info())
+#Test2
+Env.SetStart([2,3])
+assert Env.RetState() == [2, 3, 0],"Test2 failed"
+
+#Test3
+Env.SetState([2,3],1)
+assert Env.RetState() == [2, 3, 1],"Test3.1 failed"
+Env.SetStart([2,3])
+assert Env.RetState() == [2, 3, 1],"Test3.2 failed"
+Env.SetState([2,3],0)
+assert Env.RetState() == [2, 3, 0],"Test3.3 failed"
+
+#Test4
+Env.SetState([4,5],reward = -2)
+assert Env.RetReward() == -1,"Test4.1 failed"
+assert Env.RetReward([4,5]) == -2,"Test4.2 failed"
+
+# print(Env.Info())

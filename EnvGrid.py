@@ -10,15 +10,15 @@ class typGridState:
     
 class clsEnvironment:
     def __init__(self,rows,cols,reward, parameters = []):
-        self.limit_cols = cols
-        self.limit_rows = rows
+        self.cols = cols
+        self.rows = rows
         self.ireward = reward
         if not parameters == []:
             assert len(parameters)==3, "Error! Length of Parameters!"
-            self.limit_cols = parameters[0]
-            self.limit_rows = parameters[1]
+            self.cols = parameters[0]
+            self.rows = parameters[1]
             self.ireward = parameters[2]
-        self.EnvStates = [[typGridState(i,j,self.ireward,False) for j in range(cols)] for i in range(rows)]
+        self.EnvStates = [[typGridState(i,j,self.ireward,False) for j in range(self.cols)] for i in range(self.rows)]
         self.currentposition = (0,0)
         self.start = (0,0)
 
@@ -37,13 +37,13 @@ class clsEnvironment:
 
     def SetStartPosition(self,StartPosition):
         r,c = StartPosition
-        assert r >= 0 and r < self.limit_rows and c >= 0 and c < self.limit_cols, "StartPosition out of Range"
+        assert r >= 0 and r < self.rows and c >= 0 and c < self.cols, "StartPosition out of Range"
         self.start = StartPosition
         self.currentposition = StartPosition
     
     def SetRandomStart(self):
-        r = random.randint(0,self.limit_rows-1)
-        c = random.randint(0, self.limit_cols-1)
+        r = random.randint(0,self.rows-1)
+        c = random.randint(0, self.cols-1)
         self.start = (r,c)
         self.currentposition = (r,c)
 
@@ -75,9 +75,9 @@ class clsEnvironment:
 
     def RetGridAsArray(self):
         arr = []
-        for i in range(self.limit_rows):
+        for i in range(self.rows):
             arrRow = []
-            for j in range(self.limit_cols):
+            for j in range(self.cols):
                 a = 0
                 if self.currentposition == (i,j): a = 1
                 arrRow.append(a)
@@ -104,11 +104,11 @@ class clsEnvironment:
         r,c = self.currentposition
         if direction == "left" and 0 < c:
             self.currentposition = (r,c-1)
-        elif direction == "right"and c < self.limit_cols-1:
+        elif direction == "right"and c < self.cols-1:
             self.currentposition =(r,c+1)
         elif direction == "up" and 0 < r:
             self.currentposition = (r-1,c)
-        elif direction == "down" and r < self.limit_rows-1:
+        elif direction == "down" and r < self.rows-1:
             self.currentposition = (r+1,c)
         elif direction == "":
             self.currentposition = (r,c)
@@ -146,8 +146,8 @@ class clsEnvironment:
         return gtStates
     
     def _setqValuesToEnvStates(self,terminals):
-        for i in range(self.limit_rows):
-            for j in range(self.limit_cols):
+        for i in range(self.rows):
+            for j in range(self.cols):
                 reward = self.EnvStates[i][j].reward
                 dx = terminals[0][0]-i
                 dy = terminals[0][1]-j
@@ -167,8 +167,8 @@ class clsEnvironment:
                 #if ego on edge
                 if i == 0: qup = q+reward
                 if j == 0: qleft = q+reward
-                if i == self.limit_cols-1: qdown = q+reward
-                if j == self.limit_rows-1: qright = q+reward
+                if i == self.cols-1: qdown = q+reward
+                if j == self.rows-1: qright = q+reward
                 if i == terminals[0][0] and j == terminals[0][1]:
                     self.EnvStates[i][j].q = [0.0,0.0,0.0,0.0]
                 else:
