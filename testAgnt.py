@@ -14,8 +14,11 @@ assert Agt.gamma == 0.99
 assert Agt.epsilon == [0.5]
 
 # Test2
-Agt.SetParameter(["epsilon"],[[0.3, 0.7]])
-assert Agt.epsilon == [0.3, 0.7]
+Agt.SetParameter(["epsilon"],[[0.2, 0.3, 0.7]])
+assert Agt.epsilon == [0.2, 0.3, 0.7]
+
+# Review 
+# print(Agt.rand1000)
 
 # -- Perception ---------------------------------------------------------------------
 
@@ -80,3 +83,21 @@ assert Agt.Sequence[-2].state1 == ["E",0]
 
 assert Agt.Sequence[-1].state0 == ["E",0]
 
+# -- Action ---------------------------------------------------------------------
+# Test
+Agt.SetParameter(["epsilon"],[[1]])
+jump = 0;run = 0
+for i in range(1000):
+    action = Agt.NextAction()
+    if action == "jump": jump +=1
+    if action == "run": run +=1
+assert 450 < jump and jump < 550 and 450 < run and run < 550, jump
+
+# Test
+Agt.SetParameter(["epsilon"],[[1, 0.3, 0.7]])
+jump = 0;run = 0
+for i in range(1000):
+    action = Agt.NextAction()
+    if action == "jump": jump +=1
+    if action == "run": run +=1
+assert 250 < jump and jump < 350 and 650 < run and run < 750, jump

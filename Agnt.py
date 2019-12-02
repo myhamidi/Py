@@ -9,6 +9,7 @@
 
 
 import random
+from numpy.random import choice as npchoice
 
 class typState:
     def __init__(self, features = [] , reward = 0.0, Q = []):
@@ -42,9 +43,8 @@ class clsAgent:
         self.alpha = .1
         self.gamma = 1.0
         self.epsilon = 1.0
-        self.rand = list(range(1000))
-        random.shuffle(self.rand)
         self.randIdx = 0
+        self.rand1000 = list(range(1000));random.shuffle(self.rand1000)
         self.FitDQNStepSize = 10
         self.DQNCounter = 0
         self.ModelAlpha = 0.001
@@ -64,9 +64,9 @@ class clsAgent:
             if parameter[i] == "alpha":self.alpha = value[i]
             if parameter[i] == "gamma":self.gamma = value[i]
             if parameter[i] == "epsilon":
-                assert len(value[i]) == 1 or len(value[i]) == len(self.actions)
+                assert len(value[i]) == 1 or len(value[i]) == len(self.actions)+1
                 if len(value[i]) > 1:
-                    assert sum(value[i]) == 1
+                    assert sum(value[i]) == 1 + value[i][0]
                 self.epsilon = value[i]
 
 
@@ -114,3 +114,19 @@ class clsAgent:
         retStr = "Actions: " + str(self.actions) +"\n"
         retStr += "State Features: " + str(self.features)
         return retStr
+
+# ==============================================================================
+# -- Action --------------------------------------------------------------------s
+# ==============================================================================  
+    def NextAction(self):
+        rand = self._NextRand1000()/1000
+        if rand <= self.epsilon[0]: # Random (x-case epsilon == 1)
+            if len(self.epsilon)>1:
+                return npchoice(a=self.actions,size=1,p=self.epsilon[1:])[0]
+            else:
+                return random.choice(self.actions)
+
+    def _NextRand1000(self):
+        self.randIdx +=1
+        if self.randIdx == 1000: self.randIdx = 0
+        return self.rand1000[self.randIdx]
