@@ -15,8 +15,8 @@ class clsEnvironment:
         self.ireward = reward
         if not parameters == []:
             assert len(parameters)==3, "Error! Length of Parameters!"
-            self.cols = parameters[0]
-            self.rows = parameters[1]
+            self.rows = parameters[0]
+            self.cols = parameters[1]
             self.ireward = parameters[2]
         self.EnvStates = [[typGridState(i,j,self.ireward,False) for j in range(self.cols)] for i in range(self.rows)]
         self.currentposition = (0,0)
@@ -79,7 +79,7 @@ class clsEnvironment:
             arrRow = []
             for j in range(self.cols):
                 a = 0
-                if self.currentposition == (i,j): a = 1
+                if self.currentposition == [i+1,j+1]: a = 1
                 arrRow.append(a)
             arr.append(arrRow)
         return arr

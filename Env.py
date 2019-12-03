@@ -3,11 +3,12 @@
 #
 # Env.clsEnv("Grid",[10,10,-1])         | Initiate Environment Grid
 # Env.SetStart([2,3])                   | Set Ego Start Position to [2,3]
-# Env.RetStatue()                       | Return Reward of current state
+# Env.Step(action)                      | Perform Action Step
+# Env.RetState()                        | Return current state
 # Env.RetReward()                       | Return Reward of current state
 # Env.RetReward([4,5])                  | Return Reward of state [4,5]
 # Env.RetActions()                      | Return Actions that can be applied to the environement
-# Env.RetStateFeatures()                | Return Features used for State Representation
+# Env.RetEnvFeatures()                | Return Features used for State Representation
 # ==============================================================================
 
 import EnvCarla
@@ -56,6 +57,9 @@ class clsEnv:
     
     def RetState(self):
         return self.Env.RetStateFeatures()
+
+    def RetStateAsGrid(self):
+        return self.Env.RetGridAsArray()
     
     def RetReward(self,state = []):
         if state == []:
@@ -66,5 +70,5 @@ class clsEnv:
     def RetActions(self):
         return self.Env.ReturnActionList()
 
-    def RetStateFeatures(self):
+    def RetEnvFeatures(self):
         return self.Env.features
