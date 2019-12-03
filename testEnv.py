@@ -43,6 +43,6 @@ assert Env.RetState() == [2, 3, 0], "Test7 failed"
 
 # Test
 Env = Envr.clsEnv("Grid",[3,4,-1]) 
-Env.SetStart([2,3])
-assert Env.RetState() == [2, 3, 0],Env1.RetState()
+Env.SetStart([1,2])
+assert Env.RetState() == [1, 2, 0],Env1.RetState()
 assert Env.RetStateAsGrid() == [[0,0,0,0],[0,0,1,0],[0,0,0,0]],Env.RetStateAsGrid()

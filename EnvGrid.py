@@ -19,8 +19,8 @@ class clsEnvironment:
             self.cols = parameters[1]
             self.ireward = parameters[2]
         self.EnvStates = [[typGridState(i,j,self.ireward,False) for j in range(self.cols)] for i in range(self.rows)]
-        self.currentposition = (0,0)
-        self.start = (0,0)
+        self.currentposition = [0,0]
+        self.start = [0,0]
 
         self.step = 0
         self.run = 0
@@ -44,8 +44,8 @@ class clsEnvironment:
     def SetRandomStart(self):
         r = random.randint(0,self.rows-1)
         c = random.randint(0, self.cols-1)
-        self.start = (r,c)
-        self.currentposition = (r,c)
+        self.start = [r,c]
+        self.currentposition = [r,c]
 
     def SetTerminalState(self,pos):
         row, col = pos
@@ -56,7 +56,7 @@ class clsEnvironment:
         self.EnvStates[row][col].reward = Reward
 
     def RetReward(self):
-        x,y = self.currentposition
+        x=self.currentposition[0];y=self.currentposition[1]
         return self.EnvStates[x][y].reward
 
     def RetState(self):
@@ -70,7 +70,7 @@ class clsEnvironment:
         if self.IsCurrentStateTerminal() == True:
             self.run += 1
             t = 1
-        x,y = self.currentposition
+        x=self.currentposition[0];y=self.currentposition[1]
         return [x,y,t]
 
     def RetGridAsArray(self):
@@ -79,14 +79,14 @@ class clsEnvironment:
             arrRow = []
             for j in range(self.cols):
                 a = 0
-                if self.currentposition == [i+1,j+1]: a = 1
+                if self.currentposition == [i,j]: a = 1
                 arrRow.append(a)
             arr.append(arrRow)
         return arr
 
     def IsCurrentStateTerminal(self):
-        row, col = self.currentposition
-        if self.EnvStates[row][col].terminal==True:
+        x=self.currentposition[0];y=self.currentposition[1]
+        if self.EnvStates[x][y].terminal==True:
             return True
         return False
 
@@ -101,17 +101,17 @@ class clsEnvironment:
 
     def move(self,direction):
         self.step = self.step +1
-        r,c = self.currentposition
+        r=self.currentposition[0];c=self.currentposition[1]
         if direction == "left" and 0 < c:
-            self.currentposition = (r,c-1)
+            self.currentposition = [r,c-1]
         elif direction == "right"and c < self.cols-1:
-            self.currentposition =(r,c+1)
+            self.currentposition =[r,c+1]
         elif direction == "up" and 0 < r:
-            self.currentposition = (r-1,c)
+            self.currentposition = [r-1,c]
         elif direction == "down" and r < self.rows-1:
-            self.currentposition = (r+1,c)
+            self.currentposition = [r+1,c]
         elif direction == "":
-            self.currentposition = (r,c)
+            self.currentposition = [r,c]
 
     def ReturnActionList(self):
         return self.actions

@@ -1,3 +1,10 @@
+# ==============================================================================
+# -- API -----------------------------------------------------------------------
+#
+# Render.clsGrid(10,20,"")                                              | Initiate Render Grid
+# Render.renderArray([[0,1,0],[0,0,0]], "Hello World",500)              | Display Grid with text for 500ms
+
+
 import tkinter as tk
 
 class clsGrid:

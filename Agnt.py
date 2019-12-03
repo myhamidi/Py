@@ -5,6 +5,7 @@
 # Agt.SetParameter(["alpha","gamma"],[0.8,0.99])                | Set Agents parameter
 # Agt.PerceiveEnv([2,"street",0.1,0],-2)                        | Agent State and Reward Preception. Last index of list:
 #                                                               | 0 = non terminal; 1 = terminal state
+# Agt.NextAction()                                              | next action according to eps-greedy policy
 # Agt.Reset()                                                   | Delete Agt internal states and sequeces
 
 
@@ -43,7 +44,7 @@ class clsAgent:
 
         self.alpha = .1
         self.gamma = 1.0
-        self.epsilon = 1.0
+        self.epsilon = [1.0]
         self.randIdx = 0
         self.rand1000 = list(range(1000));random.shuffle(self.rand1000)
         self.FitDQNStepSize = 10
