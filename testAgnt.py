@@ -4,8 +4,11 @@ import Agnt
 
 # Test1
 Agt = Agnt.clsAgent(["jump", "run"],["world","level","terminal"])
-retStr = "Actions: ['jump', 'run']"+"\n";retStr += "State Features: ['world', 'level', 'terminal']"
-assert Agt.Info() == retStr
+assert Agt.actions == ["jump", "run"]
+assert Agt.features == ["world","level","terminal"]
+assert Agt.alpha == 0.1
+assert Agt.gamma == 1.0
+assert Agt.epsilon == [1.0]
 
 # Test2
 Agt.SetParameter(["alpha","gamma", "epsilon"],[0.8,0.99,[0.5]])
@@ -68,6 +71,8 @@ for i in range(100):
     Agt.PerceiveEnv([i%10,100-i%10,0],-1)
 assert Agt.Sequence[-1].totalreward == -100
 
+
+
 # -- Terminal ---------------------------------------------------------------------
 
 # Test: 
@@ -102,6 +107,15 @@ Agt.PerceiveEnv(["A",0],-1)
 Agt.PerceiveEnv(["B",1],-2)
 assert Agt.Sequence[-1].reward == -1
 assert Agt.Sequence[-1].totalreward == -3
+
+# Test
+Agt.Reset()
+Agt.PerceiveEnv(["A",0],-1)
+Agt.PerceiveEnv(["B",1],-2)
+Agt.PerceiveEnv(["B",1],-2)
+Agt.PerceiveEnv(["B",1],-0)
+assert Agt.Nterminal == 3,Agt.Nterminal
+
 
 # -- Reward ---------------------------------------------------------------------
 Agt.Reset()
@@ -145,6 +159,7 @@ assert 250 < jump and jump < 350 and 650 < run and run < 750, jump
 assert Agt.Sequence[-1].action == "run" or Agt.Sequence[-1].action == "jump", Agt.Sequence[-1].action
 
 # -- Export Import Q ---------------------------------------------------------------------
+# Test
 Agt.Reset()
 for i in range(100):
     Agt.PerceiveEnv([i%5+1,0],-1)
@@ -161,6 +176,7 @@ for i in range(len(Agt.States)):
     # assert Agt.State[-1*i].QUpdated == AgtTestQ.State[-1*i].QUpdated  this is not imported
 
 # -- Export Import Seq ---------------------------------------------------------------------
+# Test
 Agt.Reset()
 for i in range(100):
     Agt.PerceiveEnv([i%5+1,0],-1)
@@ -180,3 +196,27 @@ for i in range(100):
     assert Agt.Sequence[-1*i].actionInt == AgtTestS.Sequence[-1*i].actionInt
     assert Agt.Sequence[-1*i].rg == AgtTestS.Sequence[-1*i].rg
     # assert Agt.Sequence[-1*i].StepSampled == AgtTest.Sequence[-1*i].StepSampled  this is not imported
+
+
+# Test
+Agt.Reset()
+for i in range(2*10**2):
+    Agt.PerceiveEnv([i,0],-1)
+    Agt.NextAction()
+    print(i,end = "\r")
+assert len(Agt.Sequence) == 2*10**2
+Agt.SetParameter(["buffer","batch"],[10**2,10**2])
+assert Agt.buffer == 10**2
+assert Agt.batch == 10**2
+assert len(Agt.Sequence) == 10**2
+
+# Test
+Agt.Reset()
+Agt.SetParameter(["buffer"],[5])
+for i in range(5):
+    Agt.PerceiveEnv([i,0],-1)
+assert Agt.Sequence[0].state0 == [0,0]
+assert Agt.Sequence[-1].state0 == [4,0]
+Agt.PerceiveEnv([5,0],-1)
+assert Agt.Sequence[0].state0 == [1,0]
+assert Agt.Sequence[-1].state0 == [5,0]

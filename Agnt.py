@@ -4,9 +4,10 @@
 # Agnt.clsAgent(["jump", "run"],["world","level","terminal"])   | Initiate Agent
 # Agt.SetParameter(["alpha","gamma"],[0.8,0.99])                | Set Agents parameter
 # Agt.PerceiveEnv([2,"street",0.1,0],-2)                        | Agent State and Reward Preception. Last index of list:
-#                                                               | 0 = non terminal; 1 = terminal state
 # Agt.NextAction()                                              | next action according to eps-greedy policy
 # Agt.Reset()                                                   | Delete Agt internal states and sequeces
+# ExportQ(path) / ImportQ(path)                                 | Export Import Q Table
+# ExportSeq(path) / ImportSeq(path)                             | Export Import Step Sequence
 
 
 import random
@@ -36,29 +37,20 @@ class clsAgent:
     def __init__(self, actionlist, featurelist = []):
         self.States = []         #Typ: typState. Remembers all (unique) states qUpdated.
         self.Sequence = []
-        self.TerminalRewards = []       # idx, reward
         self.actions = actionlist
-        self.actionsConstrains = actionlist
         self.features = featurelist
         self.Nterminal = 0
 
-        self.alpha = .1
+        self.alpha = 0.1
         self.gamma = 1.0
         self.epsilon = [1.0]
+        self.buffer = 10**5
+        self.batch = 10**5
         self.randIdx = 0
         self.rand1000 = list(range(1000));random.shuffle(self.rand1000)
-        self.FitDQNStepSize = 10
-        self.DQNCounter = 0
-        self.ModelAlpha = 0.001
-
-        self.batchsize = 0
-        self.SequenceSampleLIST = []
-        self.SequenceSampleLISTXA = []
-        self.SequenceSampleLISTX = []
-        self.SequenceSampleTYP = []
 
 # ==============================================================================
-# -- Init ----------------------------------------------------------------------
+# -- SetParameter --------------------------------------------------------------
 # ==============================================================================   
     def SetParameter(self, parameter = [],value = []):
         assert len(parameter)>0 and len(parameter)== len(value)
@@ -70,28 +62,42 @@ class clsAgent:
                 if len(value[i]) > 1:
                     assert sum(value[i]) == 1 + value[i][0]
                 self.epsilon = value[i]
+            if parameter[i] == "buffer":
+                self.buffer = value[i]
+                self._UpdateSequenceLen()
+            if parameter[i] == "batch":
+                self.batch = value[i]
 
+    def _UpdateSequenceLen(self):
+        if self.buffer < len(self.Sequence):
+            l = len(self.Sequence)
+            del self.Sequence[0:l-self.buffer]
 
 # ==============================================================================
-# -- Perception ----------------------------------------------------------------
+# -- PerceiveEnv ---------------------------------------------------------------
 # ============================================================================== 
     def PerceiveEnv(self,state,reward):
         self._UpdateSequence(state)
         self._UpdateStatesTable(state)
+        self._UpdateNterminal(state)
         self._RewardToStep(reward)
-        # self._UpdateNumTerminal()
 
+    def _UpdateNterminal(self, state):
+            if state[-1] == 1: self.Nterminal +=1
         
     def _UpdateSequence(self,featState):
         if len(self.Sequence)==0:
             self.Sequence.append(typStep(state0 = featState))
             return
-
-        if featState[-1] == 0:
-            self.Sequence.append(typStep(state0 = featState))
-            if self.Sequence[-2].state1 == [0]:self.Sequence[-2].state1 = featState 
-        else:
+        if featState[-1] == 1:
             self.Sequence[-1].state1 = featState
+            return
+        if len(self.Sequence) >= self.buffer:
+            del self.Sequence[0]
+
+        self.Sequence.append(typStep(state0 = featState))
+        if self.Sequence[-2].state1 == [0]:self.Sequence[-2].state1 = featState 
+            
     
     def _UpdateStatesTable(self,state):
         for i in range(len(self.States)):
@@ -100,7 +106,7 @@ class clsAgent:
         self.States.append(typState(features = state, Q =[0]*len(self.actions)))
 
 # ==============================================================================
-# -- Reward ----------------------------------------------------------------
+# -- _Reward ----------------------------------------------------------------
 # ============================================================================== 
 
     def _RewardToStep(self,reward):
@@ -123,24 +129,26 @@ class clsAgent:
             return self.Sequence[-1].totalreward + reward 
         return self.Sequence[-2].totalreward + reward 
 
+# ==============================================================================
+# -- Reset ----------------------------------------------------------------
+# ============================================================================== 
 
     def Reset(self):
         self.States = []
         self.Sequence = []
+        self.Nterminal = 0
 
 # ==============================================================================
-# -- Return ---------------------------------------------------------------------
-# ==============================================================================     
-    def Info(self):
-        retStr = "Actions: " + str(self.actions) +"\n"
-        retStr += "State Features: " + str(self.features)
-        return retStr
-
-# ==============================================================================
-# -- Actions -------------------------------------------------------------------
+# -- NextAction ----------------------------------------------------------------
 # ==============================================================================  
-    def NextAction(self):
-        retNextAction = self._RetRandomAction() if self._NextActionIsRandom() else ""
+    def NextAction(self, action = "\_(ツ)_/"):
+        if self.Sequence[-1].state1[-1] == 1:
+            return ""
+        if action == "\_(ツ)_/":
+            retNextAction = self._RetRandomAction() if self._NextActionIsRandom() else ""
+        else:
+            assert self.actions.index(action)>-1
+            retNextAction = action 
         self._SetActionToLastStep(retNextAction)
         return retNextAction
 
@@ -177,7 +185,7 @@ class clsAgent:
             features = QImport.at[col, "State"].replace("[","").replace("]","").split(",")
             Q = QImport.at[col, "Q"].replace("[","").replace("]","").split(",")
             QUpdates = QImport.at[col, "QUpdates"]
-            for i in range(len(features)): features[i] = float(features[i])
+            for i in range(len(features)): features[i] = float(features[i]); features[-1] = int(features[-1])
             for i in range(len(Q)): Q[i] = float(Q[i])
             self.States.append(typState(features = features, Q = Q, QUpdates = QUpdates))
 
@@ -194,8 +202,8 @@ class clsAgent:
             a = SeqImport.at[col, "action"]
             aint = SeqImport.at[col, "actionInt"]
             rg = SeqImport.at[col, "rnd_gd"]
-            for i in range(len(state0)): state0[i] = float(state0[i])
-            for i in range(len(state1)): state1[i] = float(state1[i])
+            for i in range(len(state0)): state0[i] = float(state0[i]); state0[-1] = int(state0[-1])
+            for i in range(len(state1)): state1[i] = float(state1[i]); state1[-1] = int(state1[-1])
             self.Sequence.append(typStep(state0=state0,state1=state1, \
                 reward=r, totalreward=tr, action = a, actionInt = aint, rg= rg))
 
