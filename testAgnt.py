@@ -52,7 +52,7 @@ Agt.PerceiveEnv([1,0],-1)
 assert Agt.Sequence[-2].state1 == [1,0]
 assert Agt.Sequence[-1].state0 == [1,0]
 
-# Test7
+# Test reward
 Agt.Reset()
 Agt.PerceiveEnv([1,0],-2)
 Agt.PerceiveEnv([2,0],-3)
@@ -64,8 +64,9 @@ assert Agt.Sequence[-2].reward == -3
 assert Agt.Sequence[-2].totalreward == -5
 assert Agt.Sequence[-1].reward == -4,Agt.Sequence[-1].reward
 assert Agt.Sequence[-1].totalreward == -14
+assert Agt.States[3].reward == -5
 
-#Test8
+#Test reward
 Agt.Reset()
 for i in range(100):
     Agt.PerceiveEnv([i%10,100-i%10,0],-1)
@@ -79,7 +80,7 @@ assert Agt.Sequence[-1].totalreward == -100
 Agt.Reset()
 Agt.PerceiveEnv(["A",0],-1)
 Agt.PerceiveEnv(["B",0],-1)
-Agt.PerceiveEnv(["C",1],-1)
+Agt.PerceiveEnv(["C",1],-2)
 Agt.PerceiveEnv(["D",0],-1)
 Agt.PerceiveEnv(["E",0],-1)
 assert Agt.Sequence[-4].state0 == ["A",0]
@@ -90,7 +91,8 @@ assert Agt.Sequence[-4].totalreward == -1
 assert Agt.Sequence[-3].state0 == ["B",0]
 assert Agt.Sequence[-3].state1 == ["C",1]
 assert Agt.Sequence[-3].reward == -1
-assert Agt.Sequence[-3].totalreward == -3
+assert Agt.Sequence[-3].totalreward == -4
+assert Agt.States[2].reward == -2
 
 assert Agt.Sequence[-2].state0 == ["D",0]
 assert Agt.Sequence[-2].state1 == ["E",0]
@@ -158,6 +160,18 @@ for i in range(1000):
 assert 250 < jump and jump < 350 and 650 < run and run < 750, jump
 assert Agt.Sequence[-1].action == "run" or Agt.Sequence[-1].action == "jump", Agt.Sequence[-1].action
 
+# Test
+Agt.Reset()
+Agt.PerceiveEnv([1,0],-1)
+Agt.NextAction("jump")
+Agt.PerceiveEnv([2,0],-1)
+assert Agt.Sequence[-2].action == "jump"
+assert Agt.Sequence[-2].actionInt == 0
+Agt.NextAction("run")
+Agt.PerceiveEnv([3,0],-1)
+assert Agt.Sequence[-2].action == "run"
+assert Agt.Sequence[-2].actionInt == 1
+
 # -- Export Import Q ---------------------------------------------------------------------
 # Test
 Agt.Reset()
@@ -196,7 +210,12 @@ for i in range(100):
     assert Agt.Sequence[-1*i].actionInt == AgtTestS.Sequence[-1*i].actionInt
     assert Agt.Sequence[-1*i].rg == AgtTestS.Sequence[-1*i].rg
     # assert Agt.Sequence[-1*i].StepSampled == AgtTest.Sequence[-1*i].StepSampled  this is not imported
-
+assert Agt.States[0].features == [1.0,0]
+assert Agt.States[2].features == [2.0,0]
+assert Agt.States[3].features == [3.0,0]
+assert Agt.States[4].features == [4.0,0]
+assert Agt.States[5].features == [5.0,0]
+assert Agt.States[1].features == [7.0,1]
 
 # Test
 Agt.Reset()
@@ -220,3 +239,23 @@ assert Agt.Sequence[-1].state0 == [4,0]
 Agt.PerceiveEnv([5,0],-1)
 assert Agt.Sequence[0].state0 == [1,0]
 assert Agt.Sequence[-1].state0 == [5,0]
+
+# Test Sort
+Agt.Reset()
+Agt.ImportSeq("csv/test/testSeq.csv")
+Agt.SortSequence()
+Agt.RemoveDuplicateSteps()
+c = 0
+for i in range(10):
+    for j in range(10):
+        if i == 9 and j == 9:
+            assert Agt.Sequence[c-1].state1 == [float(i), float(j), 1]
+            break
+        for k in range(4):
+            assert Agt.Sequence[c].state0 == [float(i), float(j), 0],c
+            assert Agt.Sequence[c].actionInt == k,str(c) + " " + str(k)
+            c +=1
+Agt.ExportSeqtoCSV("csv/test/testSeqSorted.csv")
+
+
+assert False, "testAgnt sucessfull"

@@ -110,13 +110,19 @@ class clsAgent:
 # ============================================================================== 
 
     def _RewardToStep(self,reward):
-        self.Sequence[-1].reward = self._RetReward(reward)
+        if self.Sequence[-1].state1[-1] == 0:
+            self._SetRewardToStep(reward)
+        if self.Sequence[-1].state1[-1] == 1:
+            self._SetRewardToTerminalState(reward)
+
         self.Sequence[-1].totalreward = self._RetTotalReward(reward)
 
-    def _RetReward(self,reward):
-        if self.Sequence[-1].state1[-1] == 1:
-            return self.Sequence[-1].reward
-        return reward 
+    def _SetRewardToStep(self,reward):
+        self.Sequence[-1].reward = reward 
+    
+    def _SetRewardToTerminalState(self,reward):
+        sIdx = self._retStatesIdx(self.Sequence[-1].state1)
+        self.States[sIdx].reward = reward
     
     def _RetTotalReward(self,reward):
         if len(self.Sequence) == 1 and self.Sequence[-1].state1[-1] == 0:
@@ -128,6 +134,41 @@ class clsAgent:
         if self.Sequence[-1].state1[-1] == 1:
             return self.Sequence[-1].totalreward + reward 
         return self.Sequence[-2].totalreward + reward 
+
+# ==============================================================================
+# -- Sort ----------------------------------------------------------------
+# ============================================================================== 
+    def SortStates(self):
+        # Bubble Sort
+        n = len(self.States)
+        for i in range(n):
+            for j in range(0, n-i-1):
+                if self.States[j].features > self.States[j+1].features:
+                    self.States[j], self.States[j+1] = self.States[j+1], self.States[j]
+        return
+
+    def SortSequence(self):
+        # Bubble Sort
+        n = len(self.Sequence)
+        for i in range(n):
+            for j in range(0, n-i-1):
+                if self.Sequence[j].state0 + [self.Sequence[j].actionInt] > self.Sequence[j+1].state0 + [self.Sequence[j+1].actionInt]:
+                    self.Sequence[j], self.Sequence[j+1] = self.Sequence[j+1], self.Sequence[j]
+        return
+
+    def RemoveDuplicateSteps(self):
+        arr = []
+        for step in self.Sequence:
+            if not self._isStepInStepList(step,arr):
+                arr.append(step)
+        self.Sequence = arr
+
+    def _isStepInStepList(self, step, steplist):
+        for stp in steplist:
+            if stp.state0 + [stp.actionInt] + [stp.reward] == \
+                step.state0 + [step.actionInt] + [step.reward]:
+                return True
+        return False
 
 # ==============================================================================
 # -- Reset ----------------------------------------------------------------
@@ -145,7 +186,7 @@ class clsAgent:
         if self.Sequence[-1].state1[-1] == 1:
             return ""
         if action == "\_(ツ)_/":
-            retNextAction = self._RetRandomAction() if self._NextActionIsRandom() else ""
+            retNextAction = self._RetRandomAction() if self._NextActionIsRandom() else self.actions[0]
         else:
             assert self.actions.index(action)>-1
             retNextAction = action 
@@ -165,6 +206,7 @@ class clsAgent:
 
     def _SetActionToLastStep(self,action):
         self.Sequence[-1].action = action
+        self.Sequence[-1].actionInt = self.actions.index(action)
     
     def _NextActionIsRandom(self):
         rand = self._NextRand1000()/1000
@@ -172,6 +214,15 @@ class clsAgent:
             return True
         else:
             return False
+# ==============================================================================
+# -- Basis --------------------------------------------------------------------
+# ==============================================================================
+
+    def _retStatesIdx(self,state):
+        for i in range(len(self.States)):
+            if self.States[i].features == state:
+                return i
+
 
 # ==============================================================================
 # -- Import --------------------------------------------------------------------
@@ -194,18 +245,25 @@ class clsAgent:
         SeqImport = pd.read_csv(dataset_path, skiprows = 0, na_values = "?", \
         comment='\t', sep="|", skipinitialspace=True, error_bad_lines=False)
 
+        #Rebuild Seq
         for col, _ in SeqImport.iterrows():
             state0 = SeqImport.at[col, "state0"].replace("[","").replace("]","").split(",")
             state1 = SeqImport.at[col, "state1"].replace("[","").replace("]","").split(",")
-            r = SeqImport.at[col, "reward"]
+            r = float(SeqImport.at[col, "reward"])
             tr = SeqImport.at[col, "treward"]
             a = SeqImport.at[col, "action"]
-            aint = SeqImport.at[col, "actionInt"]
+            aint = int(SeqImport.at[col, "actionInt"])
             rg = SeqImport.at[col, "rnd_gd"]
             for i in range(len(state0)): state0[i] = float(state0[i]); state0[-1] = int(state0[-1])
             for i in range(len(state1)): state1[i] = float(state1[i]); state1[-1] = int(state1[-1])
             self.Sequence.append(typStep(state0=state0,state1=state1, \
                 reward=r, totalreward=tr, action = a, actionInt = aint, rg= rg))
+
+        #Rebuild State Table
+        for step in self.Sequence:
+            self._UpdateStatesTable(step.state0)
+            self._UpdateStatesTable(step.state1)
+
 
 # ==============================================================================
 # -- Export --------------------------------------------------------------------
