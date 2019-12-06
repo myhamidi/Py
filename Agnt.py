@@ -125,14 +125,12 @@ class clsAgent:
         self.States[sIdx].reward = reward
     
     def _RetTotalReward(self,reward):
-        if len(self.Sequence) == 1 and self.Sequence[-1].state1[-1] == 0:
+        if len(self.Sequence) == 1:
             return reward
-        if len(self.Sequence) == 1 and self.Sequence[-1].state1[-1] == 1:
-            return self.Sequence[-1].reward + reward
         if self.Sequence[-2].state1[-1] == 1:
             return reward
         if self.Sequence[-1].state1[-1] == 1:
-            return self.Sequence[-1].totalreward + reward 
+            return reward 
         return self.Sequence[-2].totalreward + reward 
 
 # ==============================================================================
@@ -227,8 +225,11 @@ class clsAgent:
 # ==============================================================================
 # -- Import --------------------------------------------------------------------
 # ==============================================================================
-    def ImportQ(self,dataset_path, ResetStates = True):
-        if ResetStates:self.States = []
+    def ImportQ(self,dataset_path, ResetStates = True, CompareMode = False):
+        if CompareMode:
+            self.StatesCopy = []
+        else:
+            if ResetStates:self.States = []
         QImport = pd.read_csv(dataset_path, skiprows = 0, na_values = "?", \
         comment='\t', sep="|", skipinitialspace=True, error_bad_lines=False)
 
@@ -238,7 +239,16 @@ class clsAgent:
             QUpdates = QImport.at[col, "QUpdates"]
             for i in range(len(features)): features[i] = float(features[i]); features[-1] = int(features[-1])
             for i in range(len(Q)): Q[i] = float(Q[i])
-            self.States.append(typState(features = features, Q = Q, QUpdates = QUpdates))
+            if CompareMode:
+                self.StatesCopy.append(typState(features = features, Q = Q, QUpdates = QUpdates))
+            else:
+                self.States.append(typState(features = features, Q = Q, QUpdates = QUpdates))
+
+        if CompareMode:
+            for i in range(len(self.States)):
+                if not self.States[i].Q == self.StatesCopy[i].Q:
+                    return i+1
+            return 0
 
     def ImportSeq(self,dataset_path, ResetSequence = True):
         if ResetSequence:self.Sequence = []
@@ -262,7 +272,8 @@ class clsAgent:
         #Rebuild State Table
         for step in self.Sequence:
             self._UpdateStatesTable(step.state0)
-            self._UpdateStatesTable(step.state1)
+            if len(step.state1) > 1:
+                self._UpdateStatesTable(step.state1)
 
 
 # ==============================================================================

@@ -62,8 +62,8 @@ assert Agt.Sequence[-3].reward == -2
 assert Agt.Sequence[-3].totalreward == -2
 assert Agt.Sequence[-2].reward == -3
 assert Agt.Sequence[-2].totalreward == -5
-assert Agt.Sequence[-1].reward == -4,Agt.Sequence[-1].reward
-assert Agt.Sequence[-1].totalreward == -14
+assert Agt.Sequence[-1].reward == -4
+assert Agt.Sequence[-1].totalreward == -5
 assert Agt.States[3].reward == -5
 
 #Test reward
@@ -91,7 +91,7 @@ assert Agt.Sequence[-4].totalreward == -1
 assert Agt.Sequence[-3].state0 == ["B",0]
 assert Agt.Sequence[-3].state1 == ["C",1]
 assert Agt.Sequence[-3].reward == -1
-assert Agt.Sequence[-3].totalreward == -4
+assert Agt.Sequence[-3].totalreward == -2
 assert Agt.States[2].reward == -2
 
 assert Agt.Sequence[-2].state0 == ["D",0]
@@ -108,7 +108,7 @@ Agt.Reset()
 Agt.PerceiveEnv(["A",0],-1)
 Agt.PerceiveEnv(["B",1],-2)
 assert Agt.Sequence[-1].reward == -1
-assert Agt.Sequence[-1].totalreward == -3
+assert Agt.Sequence[-1].totalreward == -2
 
 # Test
 Agt.Reset()
@@ -210,12 +210,13 @@ for i in range(100):
     assert Agt.Sequence[-1*i].actionInt == AgtTestS.Sequence[-1*i].actionInt
     assert Agt.Sequence[-1*i].rg == AgtTestS.Sequence[-1*i].rg
     # assert Agt.Sequence[-1*i].StepSampled == AgtTest.Sequence[-1*i].StepSampled  this is not imported
-assert Agt.States[0].features == [1.0,0]
-assert Agt.States[2].features == [2.0,0]
-assert Agt.States[3].features == [3.0,0]
-assert Agt.States[4].features == [4.0,0]
-assert Agt.States[5].features == [5.0,0]
-assert Agt.States[1].features == [7.0,1]
+assert AgtTestS.States[0].features == [1.0,0]
+assert AgtTestS.States[1].features == [7.0,1]
+assert AgtTestS.States[2].features == [2.0,0]
+assert AgtTestS.States[3].features == [3.0,0]
+assert AgtTestS.States[4].features == [4.0,0]
+assert AgtTestS.States[5].features == [5.0,0]
+assert len(AgtTestS.States) == 6
 
 # Test
 Agt.Reset()
@@ -256,6 +257,7 @@ for i in range(10):
             assert Agt.Sequence[c].actionInt == k,str(c) + " " + str(k)
             c +=1
 Agt.ExportSeqtoCSV("csv/test/testSeqSorted.csv")
+
 
 
 assert False, "testAgnt sucessfull"
