@@ -76,9 +76,10 @@ class clsAgent:
 # ==============================================================================
 # -- PerceiveEnv ---------------------------------------------------------------
 # ============================================================================== 
-    def PerceiveEnv(self,state,reward):
+    def PerceiveEnv(self,state,reward, rmbState = True):
         self._UpdateSequence(state)
-        self._UpdateStatesTable(state)
+        if rmbState: 
+            self._UpdateStatesTable(state)
         self._UpdateNterminal(state)
         self._RewardToStep(reward)
 
@@ -184,7 +185,7 @@ class clsAgent:
         if self.Sequence[-1].state1[-1] == 1:
             return ""
         if action == "\_(ツ)_/":
-            retNextAction = self._RetRandomAction() if self._NextActionIsRandom() else self.actions[0]
+            retNextAction = self._RetRandomAction() if self._IsRandomAction() else self._RetGreedyAction()
         else:
             assert self.actions.index(action)>-1
             retNextAction = action 
@@ -204,14 +205,56 @@ class clsAgent:
 
     def _SetActionToLastStep(self,action):
         self.Sequence[-1].action = action
-        self.Sequence[-1].actionInt = self.actions.index(action)
+        if action == "":
+            self.Sequence[-1].actionInt = -1
+        else:
+            self.Sequence[-1].actionInt = self.actions.index(action)
     
-    def _NextActionIsRandom(self):
+    def _IsRandomAction(self):
         rand = self._NextRand1000()/1000
         if rand <= self.epsilon[0]: # Random (x-case epsilon == 1)
             return True
         else:
             return False
+
+    def _RetGreedyAction(self):
+        state = self.Sequence[-1].state0
+        try:
+            s0Idx = [state.features[:-1] for state in self.States].index(state[:-1])
+            a = 1
+        except ValueError:
+            upIdx = self._retNearestStateIdx(state,"Upper")
+            loIdx = self._retNearestStateIdx(state,"Lower")
+            dup = [self.States[upIdx].features[i] - state[i] for i in range(len(self.features)-1)]
+            dlo = [state[i] - self.States[loIdx].features[i] for i in range(len(self.features)-1)]
+            wlo = 0; wup = 0
+            for i in range(len(dup)):
+                wlo += dup[i]*0.5**i 
+                wup += dlo[i]*0.5**i 
+            Qx = [(wlo*self.States[upIdx].Q[i] + wup*self.States[loIdx].Q[i])/(wlo+wup) for i in range(len(self.actions))]
+            return self.actions[Qx.index(max(Qx))]
+        if self.States[s0Idx].features[-1] == 1: 
+            return ""
+        return self.actions[self.States[s0Idx].Q.index(max(self.States[s0Idx].Q))]
+        
+    def _retNearestStateIdx(self, state, mode = "Upper"):
+
+        def _retRemainIdx(self, nthfeat, featValue, remainIdxs, mode):     
+            featureList = [self.States[i].features[nthfeat] for i in range(len(self.States)) if i in remainIdxs]
+            if mode == "Upper":
+                d = [f-featValue for f in featureList]
+            if mode == "Lower":
+                d = [featValue-f for f in featureList]
+            m = min([n for n in d  if n>=0])
+            return [remainIdx[i] for i in range(len(d)) if d[i]==m]
+        
+        remainIdx = [i for i in range(len(self.States))]
+        for i in range(len(self.features)-1):
+            remainIdx = _retRemainIdx(self, i, state[i], remainIdx, mode)
+            if len(remainIdx) == 1: 
+                return remainIdx[0]
+        return remainIdx[0]
+
 # ==============================================================================
 # -- Basis --------------------------------------------------------------------
 # ==============================================================================
@@ -220,6 +263,22 @@ class clsAgent:
         for i in range(len(self.States)):
             if self.States[i].features == state:
                 return i
+
+    def _retQ(self,state):
+        try:
+            s0Idx = [state.features[:-1] for state in self.States].index(state[:-1])
+            return self.States[s0Idx].Q
+        except ValueError:
+            upIdx = self._retNearestStateIdx(state,mode="Upper")
+            loIdx = self._retNearestStateIdx(state,mode="Lower")
+            dup = [self.States[upIdx].features[i] - state[i] for i in range(len(self.features)-1)]
+            dlo = [state[i] - self.States[loIdx].features[i] for i in range(len(self.features)-1)]
+            wlo = 0; wup = 0
+            for i in range(len(dup)):
+                wlo += dup[i]*0.5**i 
+                wup += dlo[i]*0.5**i 
+            Qx = [round((wlo*self.States[upIdx].Q[i] + wup*self.States[loIdx].Q[i])/(wlo+wup),1) for i in range(len(self.actions))]
+            return Qx
 
 
 # ==============================================================================

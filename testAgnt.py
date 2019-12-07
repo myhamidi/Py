@@ -172,6 +172,39 @@ Agt.PerceiveEnv([3,0],-1)
 assert Agt.Sequence[-2].action == "run"
 assert Agt.Sequence[-2].actionInt == 1
 
+# Test greedy action 1
+AgtGrid = Agnt.clsAgent(["up", "down","left","right"],["x","y","terminal"])
+AgtGrid.ImportQ("csv/test/testQ.csv")
+AgtGrid.SetParameter(["epsilon"],[[0]])
+for i in range(10):
+    for j in range(10):
+        AgtGrid.PerceiveEnv([i,j,0],-1)
+        if i == 9 and j == 9:
+            assert AgtGrid.NextAction() == ""
+        else:
+            assert (AgtGrid.NextAction() == "down" or AgtGrid.NextAction() == "right"),AgtGrid.NextAction()+str(i)+str(j)
+
+# Test greedy action 2
+for i in range(9):
+    for j in range(9):
+        AgtGrid.PerceiveEnv([i+0.5,j+0.5,0],-1, rmbState=False)
+        if i == 9 and j == 9:
+            assert AgtGrid.NextAction() == ""
+        else:
+            assert (AgtGrid.NextAction() == "down" or AgtGrid.NextAction() == "right"),AgtGrid.NextAction()+str(i)+str(j)
+
+# -- Ret Q ---------------------------------------------------------------------
+# Test Ret Q
+assert AgtGrid._retQ([8,8,0]) == [-4.0, -2.0, -4.0, -2.0] 
+assert AgtGrid._retQ([8,9,0]) == [-3.0, -1.0, -3.0, -2.0]
+assert AgtGrid._retQ([8,8.1,0]) == [-3.1, -1.1, -3.1, -2.0]
+assert AgtGrid._retQ([8,8.9,0]) == [-3.9, -1.9, -3.9, -2.0]
+
+assert AgtGrid._retQ([8,8,0]) == [-4.0, -2.0, -4.0, -2.0] 
+assert AgtGrid._retQ([9,8,0]) == [-3.0, -2.0, -3.0, -1.0]
+assert AgtGrid._retQ([8.1,8,0]) == [-3.1, -2.0, -3.1, -1.1]
+assert AgtGrid._retQ([8.9,8,0]) == [-3.9, -2.0, -3.9, -1.9]
+
 # -- Export Import Q ---------------------------------------------------------------------
 # Test
 Agt.Reset()
