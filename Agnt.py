@@ -219,22 +219,14 @@ class clsAgent:
 
     def _RetGreedyAction(self):
         state = self.Sequence[-1].state0
+        if state[-1] == 1:
+            return ""
         try:
             s0Idx = [state.features[:-1] for state in self.States].index(state[:-1])
-            a = 1
         except ValueError:
-            upIdx = self._retNearestStateIdx(state,"Upper")
-            loIdx = self._retNearestStateIdx(state,"Lower")
-            dup = [self.States[upIdx].features[i] - state[i] for i in range(len(self.features)-1)]
-            dlo = [state[i] - self.States[loIdx].features[i] for i in range(len(self.features)-1)]
-            wlo = 0; wup = 0
-            for i in range(len(dup)):
-                wlo += dup[i]*0.5**i 
-                wup += dlo[i]*0.5**i 
-            Qx = [(wlo*self.States[upIdx].Q[i] + wup*self.States[loIdx].Q[i])/(wlo+wup) for i in range(len(self.actions))]
+            Qx = self._retQ(state)
             return self.actions[Qx.index(max(Qx))]
-        if self.States[s0Idx].features[-1] == 1: 
-            return ""
+        
         return self.actions[self.States[s0Idx].Q.index(max(self.States[s0Idx].Q))]
         
     def _retNearestStateIdx(self, state, mode = "Upper"):
@@ -245,7 +237,10 @@ class clsAgent:
                 d = [f-featValue for f in featureList]
             if mode == "Lower":
                 d = [featValue-f for f in featureList]
-            m = min([n for n in d  if n>=0])
+            try:
+                m = min([n for n in d  if n>=0])
+            except ValueError:
+                return remainIdxs
             return [remainIdx[i] for i in range(len(d)) if d[i]==m]
         
         remainIdx = [i for i in range(len(self.States))]
@@ -267,17 +262,21 @@ class clsAgent:
     def _retQ(self,state):
         try:
             s0Idx = [state.features[:-1] for state in self.States].index(state[:-1])
-            return self.States[s0Idx].Q
+            Q = self.States[s0Idx].Q
+            return Q
         except ValueError:
             upIdx = self._retNearestStateIdx(state,mode="Upper")
             loIdx = self._retNearestStateIdx(state,mode="Lower")
+            if upIdx == loIdx:
+                Qx = self.States[upIdx].Q
+                return Qx
             dup = [self.States[upIdx].features[i] - state[i] for i in range(len(self.features)-1)]
             dlo = [state[i] - self.States[loIdx].features[i] for i in range(len(self.features)-1)]
             wlo = 0; wup = 0
             for i in range(len(dup)):
                 wlo += dup[i]*0.5**i 
                 wup += dlo[i]*0.5**i 
-            Qx = [round((wlo*self.States[upIdx].Q[i] + wup*self.States[loIdx].Q[i])/(wlo+wup),1) for i in range(len(self.actions))]
+            Qx = [round((wup*self.States[upIdx].Q[i] + wlo*self.States[loIdx].Q[i])/(wlo+wup),1) for i in range(len(self.actions))]
             return Qx
 
 
@@ -306,8 +305,8 @@ class clsAgent:
         if CompareMode:
             for i in range(len(self.States)):
                 if not self.States[i].Q == self.StatesCopy[i].Q:
-                    return i+1
-            return 0
+                    return "not identical at position " + str(i+1)
+            return "Q Table Identical"
 
     def ImportSeq(self,dataset_path, ResetSequence = True):
         if ResetSequence:self.Sequence = []

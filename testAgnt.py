@@ -197,13 +197,13 @@ for i in range(9):
 # Test Ret Q
 assert AgtGrid._retQ([8,8,0]) == [-4.0, -2.0, -4.0, -2.0] 
 assert AgtGrid._retQ([8,9,0]) == [-3.0, -1.0, -3.0, -2.0]
-assert AgtGrid._retQ([8,8.1,0]) == [-3.1, -1.1, -3.1, -2.0]
-assert AgtGrid._retQ([8,8.9,0]) == [-3.9, -1.9, -3.9, -2.0]
+assert AgtGrid._retQ([8,8.1,0]) == [-3.9, -1.9, -3.9, -2.0]
+assert AgtGrid._retQ([8,8.9,0]) == [-3.1, -1.1, -3.1, -2.0]
 
 assert AgtGrid._retQ([8,8,0]) == [-4.0, -2.0, -4.0, -2.0] 
 assert AgtGrid._retQ([9,8,0]) == [-3.0, -2.0, -3.0, -1.0]
-assert AgtGrid._retQ([8.1,8,0]) == [-3.1, -2.0, -3.1, -1.1]
-assert AgtGrid._retQ([8.9,8,0]) == [-3.9, -2.0, -3.9, -1.9]
+assert AgtGrid._retQ([8.1,8,0]) == [-3.9, -2.0, -3.9, -1.9]
+assert AgtGrid._retQ([8.9,8,0]) == [-3.1, -2.0, -3.1, -1.1]
 
 # -- Export Import Q ---------------------------------------------------------------------
 # Test
