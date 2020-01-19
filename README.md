@@ -25,8 +25,8 @@ for _ in range(100):
     Env.Step(Agt.NextAction())
 ```
 
-The Agent can be run in three drifferent mode: ``Offline``,``Online``, ``Silent``.   
-In ``Offline`` mode (default) the Agent will store the Agents perceived states and rewards and applied actions in a sequence list, but it will not do any learning or training and act according to a fixed Q-value based policy.  
+The Agent can be run in three drifferent modes: ``Offline``,``Online``, ``Silent``.   
+In ``Offline`` mode (default) the Agent will store the Agents perceived states and rewards and applied actions in a sequence list, but it will not do any learning or training and act randomly (epsilon = 0) or according to a fixed Q-value based policy (epilon = 1), based on the internal Q-Table or Q-Model.  
 In ``Online`` mode the Agent will store the states, rewards and actions as in ``Offline`` mode and apply a Bellman Update of the last step taken, thus updating the Q-value table continously.
 In ``Silent`` mode the Agent will not store date and not do any learning. This mode is for already trined Agents.table continously.
 
