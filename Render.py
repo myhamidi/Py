@@ -1,10 +1,3 @@
-# ==============================================================================
-# -- API -----------------------------------------------------------------------
-#
-# Render.clsGrid(10,20,"")                                              | Initiate Render Grid
-# Render.renderArray([[0,1,0],[0,0,0]], "Hello World",500)              | Display Grid with text for 500ms
-
-
 import tkinter as tk
 
 class clsGrid:
@@ -23,7 +16,7 @@ class clsGrid:
         self.txt_header = self.can.create_text((cols*self.H/2, self.TextHeight/2), text=self.text)
         self.TKinterInit = False
 
-    def renderArray(self,twodarr,text,tim):
+    def show(self,twodarr,text,tim):
         #Text
         if not text == "":
             self.can.itemconfig(self.txt_header,text=text)
@@ -44,9 +37,9 @@ class clsGrid:
             self.master.after(tim, self.can.quit)
             tk.mainloop()
         if self.TKinterInit == True:
-            self.show(tim)
+            self._CanvasShow(tim)
     
-    def show(self,tim):
+    def _CanvasShow(self,tim):
         self.can.update()
         self.master.after(tim)
 

@@ -1,0 +1,5 @@
+StateFrom|StateTo|Constraint
+[0.0, None, None]|[0.0, None, None]|['down', 'right']
+[None, 0.0, None]|[None, 0.0, None]|['up', 'down', 'right']
+[9.0, None, None]|[9.0, None, None]|['up', 'left']
+[None, 9.0, None]|[None, 9.0, None]|['up', 'down', 'left']
