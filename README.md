@@ -3,9 +3,9 @@
 ## modules
 
 ### Agnt.py
-The main Agent module. It uses [Sequence.py](https://github.com/myhamidi/RL/blob/master/Sequence.py), [States.py](https://github.com/myhamidi/RL/blob/master/States.py), [QModel.py](https://github.com/myhamidi/RL/blob/master/QModel.py) (wich uses [NN.py](https://github.com/myhamidi/RL/blob/master/NN.py)) and [Constraints.py](https://github.com/myhamidi/RL/blob/master/Constraints.py)
+The Agent uses [Sequence.py](https://github.com/myhamidi/RL/blob/master/Sequence.py), [States.py](https://github.com/myhamidi/RL/blob/master/States.py), [QModel.py](https://github.com/myhamidi/RL/blob/master/QModel.py) (wich uses [NN.py](https://github.com/myhamidi/RL/blob/master/NN.py)) and [Constraints.py](https://github.com/myhamidi/RL/blob/master/Constraints.py)
 
-Initialize the Agent with a actionlist and a featurelist that represents the state space. By default, the last feature must be "terminal".
+Initialize the Agent with an actionlist that can be input to the environment and a featurelist that represents the state space of the environment. By default, the last feature of the state representation must be set to "terminal", which is represented by 0 (non-terminal) or 1(terminal state).
 Example 1:
 ```
 Agt = Agnt.clsAgent(["jump", "run"],["world","level","terminal"])
@@ -15,7 +15,7 @@ Example 2 (Grid World):
 Agt= Agnt.clsAgent(["up", "down","left","right"],["x","y","terminal"])
 ```
 
-The Agent can interact with any environment that provides its current state (represented as list) and has an input interface for actions. The Agent preceives the current Environment state via ![#1589F0](https://placehold.it/15/1589F0/000000?text=+) ``clsAgent.PerceiveEnv(state,reward)`` and provides the next action to the Environment via ![#1589F0](https://placehold.it/15/1589F0/000000?text=+) ``clsAgent.NextAction():``.
+The Agent can interact with any environment that provides its current state as list and has an input interface for actions. The Agent perceives the current Environment state via ![#1589F0](https://placehold.it/15/1589F0/000000?text=+) ``clsAgent.PerceiveEnv(state,reward)`` and provides the next action to the Environment via ![#1589F0](https://placehold.it/15/1589F0/000000?text=+) ``clsAgent.NextAction():``.
 Example:
 ```
 Agt = Agnt.clsAgent(["up", "down", "left", "right"],["x","y","terminal"])
