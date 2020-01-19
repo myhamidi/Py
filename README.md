@@ -47,4 +47,4 @@ for _ in range(100):
     Env.Step(Agt.NextAction())
 ```
 
-The Q-Model outputs a table with same coloumns scheme as the Q-table. The Update of the Q-Model does not happen automatically with ![#1589F0](https://placehold.it/15/1589F0/000000?text=+) ``clsAgent.PerceiveEnv(state,reward)`` as it did for the Q-table. But Agent output actions will automatically be according to the Q-Model representation (for greedy actions).
+The Q-Model outputs a table with same column scheme as the Q-table. The Update of the Q-Model does not happen automatically with ![#1589F0](https://placehold.it/15/1589F0/000000?text=+) ``clsAgent.PerceiveEnv(state,reward)`` as it did for the Q-table. But the Agent output actions will be according to the Q-Model representation (for greedy actions).
