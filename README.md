@@ -30,7 +30,9 @@ In ``Offline`` mode (default) the Agent will store the Agents perceived states a
 In ``Online`` mode the Agent will store the states, rewards and actions as in ``Offline`` mode and apply a Bellman Update of the last step taken, thus updating the Q-value table continously.
 In ``Silent`` mode the Agent will not store date and not do any learning. This mode is meant for already trained Agents.
 
-The Agent has a Q-Table and a Q Model (that tries to approixmates that table) per default. The training of the Q-table happens automatically in ``Online``-Mode. Q Model Training needs to be activated via  ![#1589F0](https://placehold.it/15/1589F0/000000?text=+) ``clsAgent.Agt.QModel.SetUp()``. Now the Q Model can be trained via ``Agt.QModel.Train(FromSequence, Bellman_Iterations=1, StopAt=[1.0e-03,0])``. 
+The Agent has a Q-Table and a Q Model (that approixmates a Q table) per default to evaluate its next greedy action. The values in the Q-table represent the q value of each action for a given state, in the same order the actions were provided during the Agents initialization. The training of the Q-table happens automatically in ``Online``-Mode, incl. extending the Q-table with new rows for new states. 
+If you want the Agent to use the Q Model instead of the Q-table, the Q Model needs to be activated once via ![#1589F0](https://placehold.it/15/1589F0/000000?text=+) ``clsAgent.Agt.QModel.SetUp()`` and a batch size > 0 must be set. Now the Q Model can be trained via ``Agt.QModel.Train(FromSequence, Bellman_Iterations=1, StopAt=[1.0e-03,0])``:   
+
 - ``FromSequence``: The Sequence the QModel shall take a sample from and learn.  
 - ``Bellman_Iterations``: Number of Bellman Updates.
 - ``StopAt``: QModel fitting (via tensorflow.keras) stops when loss threshold has been reached. Per default 100 tries. Example:
@@ -45,3 +47,4 @@ for _ in range(100):
     Env.Step(Agt.NextAction())
 ```
 
+The Q-Model outputs a table with same coloumns scheme as the Q-table. The Update of the Q-Model does not happen automatically with ![#1589F0](https://placehold.it/15/1589F0/000000?text=+) ``clsAgent.PerceiveEnv(state,reward)`` as it did for the Q-table. But Agent output actions will automatically be according to the Q-Model representation (for greedy actions).
